@@ -1,0 +1,253 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --radius: 0.875rem;
+  --background: oklch(99.5% 0.012 85);
+  --foreground: oklch(22% 0.04 55);
+  --card: oklch(100% 0 0);
+  --card-foreground: oklch(22% 0.04 55);
+  --primary: oklch(72% 0.19 55);
+  --primary-hover: oklch(66% 0.21 52);
+  --primary-foreground: oklch(99% 0.01 85);
+  --secondary: oklch(96% 0.05 85);
+  --secondary-foreground: oklch(35% 0.09 55);
+  --muted: oklch(97% 0.02 85);
+  --muted-foreground: oklch(50% 0.05 60);
+  --accent: oklch(88% 0.15 80);
+  --accent-foreground: oklch(25% 0.08 55);
+  --border: oklch(92% 0.03 75);
+  --input: oklch(94% 0.03 75);
+  --ring: oklch(72% 0.19 55);
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, sans-serif;
+  overflow-x: hidden;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--background);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--muted-foreground);
+}
+
+/* Glass & Card Styles matching Reference Site */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border);
+  box-shadow: 0 4px 20px -2px rgba(40, 25, 10, 0.05);
+}
+
+.glass-panel-subtle {
+  background: rgba(255, 255, 255, 0.65);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--border);
+}
+
+.glass-panel-glow {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--border);
+  box-shadow: 0 12px 36px -4px rgba(234, 88, 12, 0.12), 0 4px 16px -2px rgba(0, 0, 0, 0.04);
+}
+
+/* Route Line Glow in Brand Orange/Coral */
+.route-glow-primary {
+  filter: drop-shadow(0 0 8px rgba(249, 115, 22, 0.5));
+}
+
+/* Leaflet Map Light Customization */
+.leaflet-container {
+  width: 100%;
+  height: 100%;
+  background: #fdfbf7 !important;
+  font-family: inherit;
+  border-radius: inherit;
+}
+
+.leaflet-popup-content-wrapper {
+  background: #ffffff !important;
+  color: #27221e !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 0.75rem !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1) !important;
+}
+
+.leaflet-popup-tip {
+  background: #ffffff !important;
+}
+
+/* Subtle glow animations */
+@keyframes pulseGlow {
+
+  0%,
+  100% {
+    opacity: 0.5;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.9;
+    transform: scale(1.05);
+  }
+}
+
+.animate-pulse-glow {
+  animation: pulseGlow 3s ease-in-out infinite;
+}
+
+/* React Phone Input 2 Theme Styling */
+/* React Phone Input 2 Theme Styling (Seamless with form inputs) */
+.react-tel-input {
+  font-family: inherit !important;
+  width: 100% !important;
+}
+
+.react-tel-input .form-control {
+  /* background-color: color-mix(in oklch, var(--secondary) 50%, transparent) !important; */
+  color: var(--foreground) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 0.75rem !important;
+  /* matches rounded-xl */
+  width: 100% !important;
+  height: 38px !important;
+  /* matches py-2.5 text-xs */
+  font-size: 0.75rem !important;
+  /* 12px / text-xs */
+  font-weight: 700 !important;
+  /* font-bold */
+  padding-left: 48px !important;
+  padding-right: 14px !important;
+  transition: all 0.15s ease !important;
+  box-shadow: none !important;
+}
+
+.react-tel-input .form-control:focus {
+  border-color: var(--primary) !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.react-tel-input .flag-dropdown {
+  background-color: transparent !important;
+  border: none !important;
+  border-radius: 0.75rem 0 0 0.75rem !important;
+  padding-left: 4px !important;
+}
+
+.react-tel-input .selected-flag {
+  background-color: transparent !important;
+  padding: 0 6px 0 8px !important;
+  border-radius: 0.75rem 0 0 0.75rem !important;
+}
+
+.react-tel-input .selected-flag:hover,
+.react-tel-input .selected-flag:focus,
+.react-tel-input .flag-dropdown.open .selected-flag {
+  background-color: transparent !important;
+}
+
+.react-tel-input .selected-flag .arrow {
+  border-top-color: var(--muted-foreground) !important;
+  margin-left: 4px !important;
+}
+
+.react-tel-input .selected-flag .arrow.up {
+  border-bottom-color: var(--muted-foreground) !important;
+}
+
+.react-tel-input .country-list {
+  background-color: var(--card) !important;
+  color: var(--foreground) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 0.75rem !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1) !important;
+  max-height: 250px !important;
+  width: 300px !important;
+  z-index: 50 !important;
+  margin-top: 4px !important;
+}
+
+.react-tel-input .country-list .country {
+  padding: 8px 12px !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+}
+
+.react-tel-input .country-list .country:hover,
+.react-tel-input .country-list .country.highlight {
+  background-color: color-mix(in oklch, var(--secondary) 60%, transparent) !important;
+  color: var(--foreground) !important;
+}
+
+.react-tel-input .search-emoji {
+  display: none !important;
+}
+
+.react-tel-input .country-list .search {
+  padding: 8px 10px !important;
+  background-color: var(--card) !important;
+}
+
+.react-tel-input .country-list .search-box {
+  background-color: color-mix(in oklch, var(--secondary) 50%, transparent) !important;
+  color: var(--foreground) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 0.5rem !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  margin: 0 !important;
+  padding: 6px 10px !important;
+  width: 100% !important;
+}
+
+/* Global 250px Max Height for All Dropdowns */
+.dropdown-menu,
+.custom-dropdown-list,
+.select-dropdown-list,
+[role="listbox"] {
+  max-height: 250px !important;
+  overflow-y: auto !important;
+}
+
+/* Custom Sleek Scrollbar */
+.custom-scrollbar::-webkit-scrollbar,
+.react-tel-input .country-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track,
+.react-tel-input .country-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb,
+.react-tel-input .country-list::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 9999px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover,
+.react-tel-input .country-list::-webkit-scrollbar-thumb:hover {
+  background: var(--muted-foreground);
+}
