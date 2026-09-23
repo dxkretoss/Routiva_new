@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import {
   Route,
   Mail,
@@ -8,8 +8,6 @@ import {
   EyeOff,
   LogIn,
   Sparkles,
-  Car,
-  Search,
   ShieldCheck,
   KeyRound,
   CheckCircle2,
@@ -20,13 +18,16 @@ import { useNotifications } from '../context/NotificationContext';
 
 export default function Login() {
   const navigate = useNavigate();
-  const { loginUser, loginAsDemo } = useAuth();
+  const location = useLocation();
+  const { loginUser } = useAuth();
   const { addToast } = useNotifications();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  const from = location.state?.from?.pathname || '/dashboard';
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -40,19 +41,13 @@ export default function Login() {
       const res = await loginUser(email, password);
       if (res.success) {
         addToast('Welcome back to Routiva!', 'success');
-        navigate('/dashboard');
+        navigate(from, { replace: true });
       }
     } catch (err) {
       addToast(err.message || 'Login failed. Check your credentials.', 'error');
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleDemo = (role) => {
-    loginAsDemo(role);
-    addToast(`Logged in as Demo ${role === 'rider' ? 'Rider (Rahul)' : 'Seeker (Ananya)'}`, 'success');
-    navigate('/dashboard');
   };
 
   return (
@@ -160,42 +155,6 @@ export default function Login() {
 
           {/* Form Card */}
           <div className="bg-card border border-border rounded-3xl p-6 sm:p-8 shadow-card space-y-5">
-            {/* 1-Click Instant Demo Login Option */}
-            <div className="bg-secondary/50 p-4 rounded-2xl border border-border">
-              <div className="flex items-center justify-between mb-2.5">
-                <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
-                  <Sparkles className="w-3.5 h-3.5 text-primary" /> Instant 1-Click Demo Access
-                </span>
-                <span className="text-[10px] text-primary font-bold bg-card px-2 py-0.5 rounded border border-border shadow-sm">
-                  Pre-configured
-                </span>
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => handleDemo('rider')}
-                  className="py-2.5 px-3 rounded-xl bg-card border border-border hover:border-primary text-xs font-bold text-foreground hover:text-primary flex items-center justify-center gap-1.5 transition-all shadow-sm"
-                >
-                  <Car className="w-3.5 h-3.5 text-primary" />
-                  Rahul (Rider)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleDemo('seeker')}
-                  className="py-2.5 px-3 rounded-xl bg-card border border-border hover:border-primary text-xs font-bold text-foreground hover:text-orange-600 flex items-center justify-center gap-1.5 transition-all shadow-sm"
-                >
-                  <Search className="w-3.5 h-3.5 text-orange-500" />
-                  Ananya (Seeker)
-                </button>
-              </div>
-            </div>
-
-            <div className="relative flex py-1 items-center">
-              <div className="flex-grow border-t border-border"></div>
-              <span className="flex-shrink mx-4 text-xs text-muted-foreground font-semibold">or continue with password</span>
-              <div className="flex-grow border-t border-border"></div>
-            </div>
-
             {/* Login Form */}
             <form onSubmit={handleLogin} className="space-y-4">
               <div>

@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 
 export default function SeekerSection() {
   const navigate = useNavigate();
-  const { isAuthenticated, loginAsDemo } = useAuth();
+  const { isAuthenticated } = useAuth();
 
   const handleFindRide = () => {
     if (isAuthenticated) {
@@ -67,13 +67,6 @@ export default function SeekerSection() {
                   <Search className="w-4 h-4 text-primary-foreground" />
                   Find a Ride
                   <ArrowRight className="w-4 h-4" />
-                </button>
-
-                <button
-                  onClick={() => { loginAsDemo('seeker'); navigate('/dashboard'); }}
-                  className="px-4 py-3.5 rounded-2xl bg-card border border-border hover:border-primary text-foreground text-xs font-bold shadow-sm"
-                >
-                  Preview Seeker Experience →
                 </button>
               </div>
             </div>

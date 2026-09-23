@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { invokeEdgeFunction } from '../lib/edgeFunctions';
-import { DEMO_COMMUTERS } from '../lib/demoData';
 
 const AuthContext = createContext(null);
 
@@ -18,11 +17,36 @@ export function AuthProvider({ children }) {
       const saved = localStorage.getItem('routiva_current_session');
       if (saved) {
         const session = JSON.parse(saved);
-        setUser(session.user);
-        setProfile(session.profile);
-        setVehicle(session.vehicle || null);
-        setRole(session.role || 'seeker');
-        setToken(session.token);
+        const demoIds = ['user_rahul_01', 'user_priya_02', 'user_ananya_03', 'user_rohit_04'];
+        if (demoIds.includes(session.user?.id) || demoIds.includes(session.userId)) {
+          localStorage.removeItem('routiva_current_session');
+          setUser(null);
+          setProfile(null);
+          setVehicle(null);
+          setRole(null);
+          setToken(null);
+        } else {
+          setUser(session.user);
+          setProfile(session.profile);
+          setVehicle(session.vehicle || null);
+          setRole(session.role || session.profile?.role || 'seeker');
+          setToken(session.token);
+
+          // Fetch freshest profile and vehicle from Edge Function Store
+          if (session.user?.id) {
+            invokeEdgeFunction('get-profile', { userId: session.user.id })
+              .then((res) => {
+                if (res?.success) {
+                  if (res.profile) {
+                    setProfile(res.profile);
+                    if (res.profile.role) setRole(res.profile.role);
+                  }
+                  if (res.vehicle) setVehicle(res.vehicle);
+                }
+              })
+              .catch(() => {});
+          }
+        }
       }
     } catch (e) {
       console.error('Session load error', e);
@@ -73,26 +97,14 @@ export function AuthProvider({ children }) {
         user: res.user,
         profile: res.profile,
         vehicle: res.vehicle || null,
-        role: res.role || 'seeker',
+        role: res.role || res.profile?.role || 'seeker',
         token: res.token
       });
     }
     return res;
   };
 
-  // 5. Instant Demo Login (For seamless 1-click evaluation of Rider/Seeker flows)
-  const loginAsDemo = (demoType = 'rider') => {
-    const demo = demoType === 'rider' ? DEMO_COMMUTERS[0] : DEMO_COMMUTERS[2];
-    saveSession({
-      user: { id: demo.userId, email: demo.email, phone: '+91 98765 12345' },
-      profile: demo.profile,
-      vehicle: demo.vehicle,
-      role: demo.role,
-      token: `routiva_jwt_${demo.userId}`
-    });
-  };
-
-  // 6. Complete Onboarding / Update Profile & Vehicle
+  // 5. Complete Onboarding / Update Profile & Vehicle
   const updateProfile = async (profileData, newRole, vehicleData) => {
     if (!user) return;
     const res = await invokeEdgeFunction('update-profile', {
@@ -102,11 +114,11 @@ export function AuthProvider({ children }) {
       vehicleData
     });
     if (res.success) {
-      const updatedProfile = res.profile;
-      const updatedVehicle = vehicleData || vehicle;
+      const updatedProfile = res.profile || profileData;
+      const updatedVehicle = res.vehicle || vehicleData || vehicle;
       const updatedRole = newRole || role;
       setProfile(updatedProfile);
-      if (vehicleData) setVehicle(updatedVehicle);
+      setVehicle(updatedVehicle);
       if (newRole) setRole(updatedRole);
       
       saveSession({
@@ -145,9 +157,9 @@ export function AuthProvider({ children }) {
         verifyOtp,
         resendOtp,
         loginUser,
-        loginAsDemo,
         updateProfile,
-        logoutUser
+        logoutUser,
+        logout: logoutUser
       }}
     >
       {children}

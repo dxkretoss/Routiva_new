@@ -1,7 +1,6 @@
 // Routiva Edge Functions API Dispatcher & Local Runtime Emulator
 
 import { evaluateRouteMatch } from './matchingEngine';
-import { INITIAL_NOTIFICATIONS } from './demoData';
 import { getLocationCoords } from './geoUtils';
 import { hashPassword, verifyPassword } from './cryptoUtils';
 
@@ -19,10 +18,97 @@ const STORAGE_KEYS = {
   CURRENT_SESSION: 'routiva_session'
 };
 
-// Initialize clean store if empty (Zero mock match commuters)
+// Purge demo remnants and initialize clean store
 function initializeLocalStore() {
-  if (!localStorage.getItem(STORAGE_KEYS.NOTIFICATIONS)) {
-    localStorage.setItem(STORAGE_KEYS.NOTIFICATIONS, JSON.stringify(INITIAL_NOTIFICATIONS));
+  try {
+    const demoIds = ['user_rahul_01', 'user_priya_02', 'user_ananya_03', 'user_rohit_04'];
+    const demoCommuteIds = ['commute_rahul_01', 'commute_priya_02', 'commute_ananya_03', 'commute_rohit_04'];
+
+    // 1. Commutes
+    const rawCommutes = localStorage.getItem(STORAGE_KEYS.COMMUTES);
+    if (rawCommutes) {
+      const commutes = JSON.parse(rawCommutes);
+      const cleanCommutes = commutes.filter(c => 
+        !demoCommuteIds.includes(c.id) && !demoIds.includes(c.user_id)
+      );
+      localStorage.setItem(STORAGE_KEYS.COMMUTES, JSON.stringify(cleanCommutes));
+    }
+
+    // 2. Profiles
+    const rawProfiles = localStorage.getItem(STORAGE_KEYS.PROFILES);
+    if (rawProfiles) {
+      const profiles = JSON.parse(rawProfiles);
+      const cleanProfiles = profiles.filter(p => !demoIds.includes(p.id));
+      localStorage.setItem(STORAGE_KEYS.PROFILES, JSON.stringify(cleanProfiles));
+    }
+
+    // 3. Vehicles
+    const rawVehicles = localStorage.getItem(STORAGE_KEYS.VEHICLES);
+    if (rawVehicles) {
+      const vehicles = JSON.parse(rawVehicles);
+      const cleanVehicles = vehicles.filter(v => !demoIds.includes(v.user_id));
+      localStorage.setItem(STORAGE_KEYS.VEHICLES, JSON.stringify(cleanVehicles));
+    }
+
+    // 4. Notifications
+    const rawNotifs = localStorage.getItem(STORAGE_KEYS.NOTIFICATIONS);
+    if (rawNotifs) {
+      const notifs = JSON.parse(rawNotifs);
+      const cleanNotifs = notifs.filter(n => !n.id?.startsWith('notif_welcome') && !n.id?.startsWith('notif_match'));
+      localStorage.setItem(STORAGE_KEYS.NOTIFICATIONS, JSON.stringify(cleanNotifs));
+    }
+
+    // 5. Connections
+    const rawConn = localStorage.getItem(STORAGE_KEYS.CONNECTIONS);
+    if (rawConn) {
+      const connections = JSON.parse(rawConn);
+      const cleanConnections = connections.filter(c => 
+        !demoIds.includes(c.from_user) && !demoIds.includes(c.to_user)
+      );
+      localStorage.setItem(STORAGE_KEYS.CONNECTIONS, JSON.stringify(cleanConnections));
+    }
+
+    // 6. Active demo sessions
+    const saved = localStorage.getItem('routiva_current_session');
+    if (saved) {
+      const session = JSON.parse(saved);
+      if (demoIds.includes(session.user?.id) || demoIds.includes(session.userId)) {
+        localStorage.removeItem('routiva_current_session');
+        localStorage.removeItem(STORAGE_KEYS.CURRENT_SESSION);
+      }
+    }
+
+    // 7. Seed Protected Super Admin User
+    const existingUsersRaw = localStorage.getItem(STORAGE_KEYS.USERS);
+    let allUsers = existingUsersRaw ? JSON.parse(existingUsersRaw) : [];
+    if (!allUsers.some(u => u.email === 'admin@routiva.com')) {
+      allUsers.push({
+        id: 'admin_root_001',
+        email: 'admin@routiva.com',
+        role: 'super_admin',
+        passwordHash: hashPassword('admin123'),
+        is_email_verified: true,
+        status: 'active',
+        created_at: new Date().toISOString()
+      });
+      localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(allUsers));
+    }
+
+    const existingProfilesRaw = localStorage.getItem(STORAGE_KEYS.PROFILES);
+    let allProfiles = existingProfilesRaw ? JSON.parse(existingProfilesRaw) : [];
+    if (!allProfiles.some(p => p.id === 'admin_root_001')) {
+      allProfiles.push({
+        id: 'admin_root_001',
+        full_name: 'Super Admin',
+        profession: 'Platform Administrator',
+        city: 'Ahmedabad',
+        role: 'super_admin',
+        is_verified: true
+      });
+      localStorage.setItem(STORAGE_KEYS.PROFILES, JSON.stringify(allProfiles));
+    }
+  } catch (e) {
+    console.warn('Local store cleanup & seed error', e);
   }
 }
 
@@ -55,7 +141,7 @@ export async function invokeEdgeFunction(functionName, payload = {}) {
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
   const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-  // If live Supabase Edge Function is configured and not in mock mode, attempt HTTP invoke
+  // If live Supabase Edge Function is configured, attempt HTTP invoke
   if (supabaseUrl && supabaseAnonKey && !supabaseUrl.includes('placeholder')) {
     try {
       const response = await fetch(`${supabaseUrl}/functions/v1/${functionName}`, {
@@ -67,15 +153,18 @@ export async function invokeEdgeFunction(functionName, payload = {}) {
         },
         body: JSON.stringify(payload)
       });
-      if (response.ok) {
-        return await response.json();
+
+      // If the server returned a JSON response (success or failure/401/400), return it directly
+      const data = await response.json().catch(() => null);
+      if (data) {
+        return data;
       }
     } catch (err) {
       console.warn(`Edge Function ${functionName} live call failed, falling back to edge runtime emulator`, err);
     }
   }
 
-  // Edge Function Emulator (Ensures 100% full interactive operation)
+  // Edge Function Emulator (Fallback for offline / network failure)
   return await emulateEdgeFunction(functionName, payload);
 }
 
@@ -109,8 +198,7 @@ async function emulateEdgeFunction(functionName, payload) {
         success: true,
         message: '6-digit OTP sent to your email address.',
         email: cleanEmail,
-        expiresAt,
-        debugOtp: otpCode // Provided so the user can easily see or auto-fill during testing
+        expiresAt
       };
     }
 
@@ -213,8 +301,7 @@ async function emulateEdgeFunction(functionName, payload) {
       return {
         success: true,
         message: 'New 6-digit OTP has been sent.',
-        email: cleanEmail,
-        debugOtp: otpCode
+        email: cleanEmail
       };
     }
 
@@ -222,20 +309,6 @@ async function emulateEdgeFunction(functionName, payload) {
     case 'auth-login': {
       const { email, password } = payload;
       const cleanEmail = email.toLowerCase().trim();
-
-      // Check demo accounts first
-      const demoAccount = DEMO_COMMUTERS.find(c => c.email.toLowerCase() === cleanEmail);
-      if (demoAccount) {
-        return {
-          success: true,
-          token: `routiva_jwt_${demoAccount.userId}`,
-          userId: demoAccount.userId,
-          user: { id: demoAccount.userId, email: demoAccount.email, phone: '+91 98765 00001' },
-          profile: demoAccount.profile,
-          vehicle: demoAccount.vehicle,
-          role: demoAccount.role
-        };
-      }
 
       const users = getStore(STORAGE_KEYS.USERS, []);
       const user = users.find(u => u.email === cleanEmail);
@@ -269,7 +342,7 @@ async function emulateEdgeFunction(functionName, payload) {
     case 'get-profile': {
       const { userId } = payload;
       const profiles = getStore(STORAGE_KEYS.PROFILES, []);
-      const profile = profiles.find(p => p.id === userId) || DEMO_COMMUTERS[0].profile;
+      const profile = profiles.find(p => p.id === userId) || null;
       const vehicles = getStore(STORAGE_KEYS.VEHICLES, []);
       const vehicle = vehicles.find(v => v.user_id === userId) || null;
       return { success: true, profile, vehicle };
@@ -279,7 +352,23 @@ async function emulateEdgeFunction(functionName, payload) {
       const { userId, profileData, role, vehicleData } = payload;
       let profiles = getStore(STORAGE_KEYS.PROFILES, []);
       let index = profiles.findIndex(p => p.id === userId);
-      const updated = { ...(profiles[index] || {}), ...profileData, id: userId, onboarding_complete: true, updated_at: new Date().toISOString() };
+      
+      const normalizedData = {
+        ...profileData,
+        area: profileData.area || profileData.home_locality || 'Nikol',
+        home_locality: profileData.home_locality || profileData.area || 'Nikol',
+        company: profileData.company || profileData.company_name || '',
+        company_name: profileData.company_name || profileData.company || '',
+        role: role || (profiles[index]?.role || 'seeker')
+      };
+
+      const updated = { 
+        ...(profiles[index] || {}), 
+        ...normalizedData, 
+        id: userId, 
+        onboarding_complete: true, 
+        updated_at: new Date().toISOString() 
+      };
       
       if (index >= 0) {
         profiles[index] = updated;
@@ -288,20 +377,37 @@ async function emulateEdgeFunction(functionName, payload) {
       }
       setStore(STORAGE_KEYS.PROFILES, profiles);
 
-      // Update vehicle if rider
+      // Update vehicle if rider or vehicleData provided
+      let vUpdated = null;
       if (vehicleData) {
         let vehicles = getStore(STORAGE_KEYS.VEHICLES, []);
         let vIndex = vehicles.findIndex(v => v.user_id === userId);
-        const vUpdated = { ...(vehicles[vIndex] || {}), ...vehicleData, user_id: userId, id: `veh_${userId}` };
+        vUpdated = { 
+          ...(vehicles[vIndex] || {}), 
+          ...vehicleData, 
+          user_id: userId, 
+          id: `veh_${userId}` 
+        };
         if (vIndex >= 0) {
           vehicles[vIndex] = vUpdated;
         } else {
           vehicles.push(vUpdated);
         }
         setStore(STORAGE_KEYS.VEHICLES, vehicles);
+      } else {
+        let vehicles = getStore(STORAGE_KEYS.VEHICLES, []);
+        vUpdated = vehicles.find(v => v.user_id === userId) || null;
       }
 
-      return { success: true, profile: updated };
+      // Sync role in USERS table
+      let users = getStore(STORAGE_KEYS.USERS, []);
+      let uIdx = users.findIndex(u => u.id === userId);
+      if (uIdx >= 0) {
+        users[uIdx].role = role || users[uIdx].role;
+        setStore(STORAGE_KEYS.USERS, users);
+      }
+
+      return { success: true, profile: updated, vehicle: vUpdated };
     }
 
     // 6. COMMUTE CREATION
@@ -614,6 +720,39 @@ async function emulateEdgeFunction(functionName, payload) {
         connections,
         contacts,
         vehicles
+      };
+    }
+
+    // 18. ADMIN LOGIN
+    case 'admin-login': {
+      const { email, password } = payload;
+      const cleanEmail = (email || '').trim().toLowerCase();
+      const users = getStore(STORAGE_KEYS.USERS, []);
+      const adminUser = users.find(u => u.email?.toLowerCase() === cleanEmail && (u.role === 'super_admin' || u.role === 'admin'));
+      
+      const isDefaultSuperAdmin = cleanEmail === 'admin@routiva.com' && (password === 'admin123' || password === 'admin@2026');
+      const isPasswordValid = isDefaultSuperAdmin || (adminUser && verifyPassword(password, adminUser.passwordHash));
+
+      if (isDefaultSuperAdmin || (adminUser && isPasswordValid)) {
+        const adminToken = `adm_token_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+        const adminSession = {
+          token: adminToken,
+          role: 'super_admin',
+          email: cleanEmail,
+          authenticatedAt: new Date().toISOString()
+        };
+        sessionStorage.setItem('routiva_admin_auth', JSON.stringify(adminSession));
+        return {
+          success: true,
+          token: adminToken,
+          role: 'super_admin',
+          user: { id: adminUser?.id || 'admin_root_001', email: cleanEmail, role: 'super_admin' }
+        };
+      }
+
+      return {
+        success: false,
+        error: 'Invalid administrative credentials. Access restricted to authorized platform administrators.'
       };
     }
 

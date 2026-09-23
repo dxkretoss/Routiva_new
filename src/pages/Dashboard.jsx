@@ -13,7 +13,7 @@ import {
   Power
 } from 'lucide-react';
 import Navbar from '../components/Navbar';
-import BottomNav from '../components/BottomNav';
+import DashboardLayout from '../components/DashboardLayout';
 import LeafletRouteMap from '../components/LeafletRouteMap';
 import { useCommute } from '../context/CommuteContext';
 import { useAuth } from '../context/AuthContext';
@@ -26,10 +26,11 @@ export default function Dashboard() {
   const acceptedPartners = connections.filter((c) => c.status === 'accepted');
 
   return (
-    <div className="min-h-screen bg-background text-foreground pb-24 md:pb-12">
-      <Navbar />
-
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-28">
+    <DashboardLayout
+      title={`Hello, ${profile?.full_name || 'Commuter'}`}
+      subtitle="Ahmedabad ↔ Gandhinagar Daily Route Network"
+    >
+      <div className="space-y-6">
         {/* Welcome Greeting */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
           <div>
@@ -287,9 +288,7 @@ export default function Dashboard() {
             </div>
           )}
         </div>
-      </main>
-
-      <BottomNav />
-    </div>
+      </div>
+    </DashboardLayout>
   );
 }

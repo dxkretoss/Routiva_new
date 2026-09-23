@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Users, Clock, CheckCircle2, Send } from 'lucide-react';
-import Navbar from '../components/Navbar';
-import BottomNav from '../components/BottomNav';
+import DashboardLayout from '../components/DashboardLayout';
 import ConnectionCard from '../components/ConnectionCard';
 import { useCommute } from '../context/CommuteContext';
 import { useAuth } from '../context/AuthContext';
@@ -34,21 +33,22 @@ export default function ConnectionsPage() {
   const list = getFilteredList();
 
   return (
-    <div className="min-h-screen bg-background text-foreground pb-24 md:pb-12">
-      <Navbar />
-
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-28">
-        <div className="mb-8">
-          <h1 className="text-2xl sm:text-3xl font-black text-foreground tracking-tight">
+    <DashboardLayout
+      title="Ride Connections & Requests"
+      subtitle="Manage your daily ride partners, incoming requests, and in-app coordination"
+    >
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-xl sm:text-2xl font-black text-foreground tracking-tight">
             Commute Connections & Requests
           </h1>
-          <p className="text-xs sm:text-sm text-muted-foreground mt-1 font-medium">
+          <p className="text-xs text-muted-foreground mt-0.5 font-medium">
             Manage your daily ride partners, incoming requests, and in-app coordination
           </p>
         </div>
 
         {/* Tab Filters */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-2 mb-6 border-b border-border">
+        <div className="flex items-center gap-2 overflow-x-auto pb-2 border-b border-border">
           <button
             onClick={() => setActiveTab('all')}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap shadow-sm ${
@@ -115,9 +115,7 @@ export default function ConnectionsPage() {
             ))}
           </div>
         )}
-      </main>
-
-      <BottomNav />
-    </div>
+      </div>
+    </DashboardLayout>
   );
 }

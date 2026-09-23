@@ -59,7 +59,7 @@ d:\Routiva\Routiva\
     "message": "Verification OTP sent to your email address.",
     "email": "user@example.com",
     "expiresAt": "2026-09-23T11:05:00.000Z",
-    "debugOtp": "582910"
+    "emailSent": true
   }
   ```
 

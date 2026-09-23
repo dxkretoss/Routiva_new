@@ -10,11 +10,18 @@ import {
   Sparkles,
   Car,
   Fuel,
-  Users
+  Users,
+  CheckCircle2,
+  Calendar,
+  ShieldCheck,
+  Check,
+  Info
 } from 'lucide-react';
-import Navbar from '../components/Navbar';
+import DashboardLayout from '../components/DashboardLayout';
 import LeafletRouteMap from '../components/LeafletRouteMap';
 import SearchableLocationSelect from '../components/SearchableLocationSelect';
+import RoutePointSuggestInput from '../components/RoutePointSuggestInput';
+import TimePickerInput from '../components/TimePickerInput';
 import { useCommute } from '../context/CommuteContext';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext';
@@ -29,7 +36,7 @@ export default function CreateCommute() {
   const { addToast } = useNotifications();
 
   const [step, setStep] = useState(1);
-  const [commuteType, setCommuteType] = useState(role === 'seeker' ? 'seeker' : 'rider');
+  const commuteType = role === 'seeker' ? 'seeker' : 'rider';
   const [loading, setLoading] = useState(false);
 
   // Commute Form Data
@@ -54,8 +61,6 @@ export default function CreateCommute() {
     { name: 'Vijay Cross Road Bus Stand', point_type: 'drop', sequence_order: 1 },
     { name: 'Gujarat University Gate', point_type: 'drop', sequence_order: 2 }
   ]);
-  const [newPickupName, setNewPickupName] = useState('');
-  const [newDropName, setNewDropName] = useState('');
 
   // Schedule & Timing
   const [days, setDays] = useState(['Mon', 'Tue', 'Wed', 'Thu', 'Fri']);
@@ -79,38 +84,8 @@ export default function CreateCommute() {
     }
   };
 
-  const handleAddRoutePoint = (e) => {
-    e.preventDefault();
-    if (!newPointName.trim()) return;
-    setRoutePoints([
-      ...routePoints,
-      { name: newPointName.trim(), sequence_order: routePoints.length + 1 }
-    ]);
-    setNewPointName('');
-  };
-
   const handleDeleteRoutePoint = (idx) => {
     setRoutePoints(routePoints.filter((_, i) => i !== idx));
-  };
-
-  const handleAddPreferredPickup = (e) => {
-    e.preventDefault();
-    if (!newPickupName.trim() || preferredPickups.length >= 5) return;
-    setPreferredPickups([
-      ...preferredPickups,
-      { name: newPickupName.trim(), point_type: 'pickup', sequence_order: preferredPickups.length + 1 }
-    ]);
-    setNewPickupName('');
-  };
-
-  const handleAddPreferredDrop = (e) => {
-    e.preventDefault();
-    if (!newDropName.trim() || preferredDrops.length >= 5) return;
-    setPreferredDrops([
-      ...preferredDrops,
-      { name: newDropName.trim(), point_type: 'drop', sequence_order: preferredDrops.length + 1 }
-    ]);
-    setNewDropName('');
   };
 
   const handleSubmitCommute = async () => {
@@ -142,6 +117,7 @@ export default function CreateCommute() {
 
     try {
       await createCommute(payload);
+      addToast('Commute corridor created successfully!', 'success');
       navigate('/matches');
     } catch (err) {
       addToast(err.message || 'Failed to create commute.', 'error');
@@ -150,69 +126,95 @@ export default function CreateCommute() {
     }
   };
 
-  return (
-    <div className="min-h-screen bg-background text-foreground">
-      <Navbar />
+  const stepsList = [
+    { num: 1, title: 'Corridor Endpoints', desc: 'Origin & Destination' },
+    { num: 2, title: 'En-Route Stops', desc: 'Intermediate Points' },
+    { num: 3, title: 'Pickup & Drop', desc: 'Preferred Landmarks' },
+    { num: 4, title: 'Schedule & Launch', desc: 'Timing & Cost Split' }
+  ];
 
-      <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-20">
-        {/* Header */}
-        <div className="text-center max-w-2xl mx-auto mb-10">
-          <span className="px-3.5 py-1 rounded-full bg-secondary text-secondary-foreground text-xs font-bold uppercase tracking-wider border border-border inline-block mb-2">
-            Route Wizard • Step {step} of 4
-          </span>
-          <h1 className="text-3xl font-black text-foreground tracking-tight">
-            {step === 1 && 'Define Your Daily Transit Corridor'}
-            {step === 2 && 'Full Sequenced Route Stops'}
-            {step === 3 && 'Preferred Pickup & Drop Points'}
-            {step === 4 && 'Schedule, Preferences & Review'}
-          </h1>
-          <p className="text-xs sm:text-sm text-muted-foreground mt-1 font-medium">
-            {step === 1 && 'Select start, destination and commute role'}
-            {step === 2 && 'Add key intermediate checkpoints you pass along the way'}
-            {step === 3 && 'Specify landmarks where you are comfortable stopping'}
-            {step === 4 && 'Confirm departure timing, contribution and launch matching'}
-          </p>
+  return (
+    <DashboardLayout
+      title="Create Commute Corridor"
+      subtitle="Define your daily transit route, sequenced stops, and schedule for automated commuter matching"
+    >
+      <div className="space-y-6 max-w-6xl mx-auto">
+        {/* Step Progress Tracker */}
+        <div className="bg-card border border-border rounded-2xl p-4 sm:p-5 shadow-sm">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+            {stepsList.map((s) => {
+              const isCompleted = step > s.num;
+              const isCurrent = step === s.num;
+              return (
+                <button
+                  key={s.num}
+                  type="button"
+                  onClick={() => s.num < step && setStep(s.num)}
+                  disabled={s.num > step}
+                  className={`flex items-center gap-3 p-2.5 sm:p-3 rounded-xl text-left transition-all ${
+                    isCurrent
+                      ? 'bg-primary/10 border border-primary/40 shadow-xs'
+                      : isCompleted
+                      ? 'bg-secondary/40 border border-border hover:bg-secondary cursor-pointer'
+                      : 'opacity-50 border border-transparent cursor-not-allowed'
+                  }`}
+                >
+                  <div
+                    className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 transition-colors ${
+                      isCurrent
+                        ? 'bg-primary text-primary-foreground shadow-glow'
+                        : isCompleted
+                        ? 'bg-emerald-500 text-white'
+                        : 'bg-secondary text-muted-foreground'
+                    }`}
+                  >
+                    {isCompleted ? <Check className="w-4 h-4" /> : s.num}
+                  </div>
+                  <div className="min-w-0">
+                    <div className={`text-xs font-black truncate ${isCurrent ? 'text-primary' : 'text-foreground'}`}>
+                      {s.title}
+                    </div>
+                    <div className="text-[10px] text-muted-foreground truncate hidden sm:block">
+                      {s.desc}
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
-        {/* Wizard Container */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          {/* Form Side */}
-          <div className="lg:col-span-7 bg-card border border-border rounded-3xl p-6 sm:p-8 shadow-card space-y-6">
-            {/* STEP 1: LOCATIONS & ROLE */}
+        {/* Main Wizard Form & Live Map Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          {/* Form Card (7 Cols) */}
+          <div className="lg:col-span-7 bg-card border border-border rounded-3xl p-5 sm:p-7 shadow-card space-y-6">
+            {/* Step Header */}
+            <div className="pb-4 border-b border-border">
+              <div className="flex items-center gap-2">
+                <span className="px-2.5 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-wider border border-primary/20">
+                  Step {step} of 4
+                </span>
+                <span className="text-xs font-bold text-muted-foreground">
+                  {commuteType === 'rider' ? '🚗 Vehicle Owner Corridor' : '🚶 Commuter Transit'}
+                </span>
+              </div>
+              <h2 className="text-xl font-black text-foreground mt-1">
+                {step === 1 && 'Define Origin & Destination'}
+                {step === 2 && 'Sequenced Route Checkpoints'}
+                {step === 3 && 'Preferred Pickup & Drop Landmarks'}
+                {step === 4 && 'Schedule, Timing & Cost Split'}
+              </h2>
+              <p className="text-xs text-muted-foreground font-medium mt-0.5">
+                {step === 1 && 'Select your daily origin and workplace area in Ahmedabad / Gandhinagar'}
+                {step === 2 && 'Add key checkpoints and cross roads along your driving corridor'}
+                {step === 3 && 'Specify landmarks where you prefer to meet and pick up co-commuters'}
+                {step === 4 && 'Set departure time, operating days, and daily fuel split'}
+              </p>
+            </div>
+
+            {/* STEP 1: LOCATIONS */}
             {step === 1 && (
               <div className="space-y-5 animate-fadeIn">
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">
-                    Commute Role
-                  </label>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setCommuteType('rider')}
-                      className={`py-3 px-4 rounded-2xl border text-xs font-bold flex items-center justify-center gap-2 transition-all ${
-                        commuteType === 'rider'
-                          ? 'bg-secondary border-primary text-primary shadow-sm'
-                          : 'bg-card border-border text-muted-foreground hover:text-foreground'
-                      }`}
-                    >
-                      <Car className="w-4 h-4 text-primary" />
-                      Rider (Offer Empty Seats)
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setCommuteType('seeker')}
-                      className={`py-3 px-4 rounded-2xl border text-xs font-bold flex items-center justify-center gap-2 transition-all ${
-                        commuteType === 'seeker'
-                          ? 'bg-secondary border-primary text-orange-600 shadow-sm'
-                          : 'bg-card border-border text-muted-foreground hover:text-foreground'
-                      }`}
-                    >
-                      <Users className="w-4 h-4 text-orange-500" />
-                      Seeker (Find a Ride)
-                    </button>
-                  </div>
-                </div>
-
                 <SearchableLocationSelect
                   label="Daily Origin / Start Area *"
                   icon={MapPin}
@@ -228,22 +230,29 @@ export default function CreateCommute() {
                   onChange={setDestinationLocation}
                   placeholder="Select destination area..."
                 />
+
+                <div className="p-3.5 rounded-2xl bg-secondary/30 border border-border text-xs text-muted-foreground flex items-start gap-2.5">
+                  <Info className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                  <span>
+                    Routiva connects verified corporate professionals travelling along the same highway and metro corridors in Ahmedabad and Gandhinagar.
+                  </span>
+                </div>
               </div>
             )}
 
-            {/* STEP 2: FULL SEQUENCED ROUTE STOPS (RIDER ONLY) */}
+            {/* STEP 2: SEQUENCED ROUTE STOPS */}
             {step === 2 && (
               <div className="space-y-4 animate-fadeIn">
-                <div className="flex items-center justify-between pb-2 border-b border-border">
+                <div className="flex items-center justify-between pb-1 border-b border-border">
                   <span className="text-xs font-bold text-foreground">
-                    Sequenced Route Points ({routePoints.length} intermediate stops)
+                    Sequenced Route Points ({routePoints.length} stops)
                   </span>
                   <span className="text-[10px] text-primary font-bold">
-                    Drop must come after pickup
+                    Order from origin to destination
                   </span>
                 </div>
 
-                <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                <div className="space-y-2 max-h-64 overflow-y-auto custom-scrollbar pr-1">
                   {routePoints.map((pt, idx) => (
                     <div
                       key={pt.name + idx}
@@ -258,7 +267,8 @@ export default function CreateCommute() {
                       <button
                         type="button"
                         onClick={() => handleDeleteRoutePoint(idx)}
-                        className="text-muted-foreground hover:text-rose-600 p-1"
+                        className="text-muted-foreground hover:text-rose-600 p-1 transition-colors"
+                        title="Remove Stop"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
@@ -266,107 +276,107 @@ export default function CreateCommute() {
                   ))}
                 </div>
 
-                {/* Add point form */}
-                <div className="flex gap-2 pt-2">
-                  <input
-                    type="text"
-                    placeholder="Add en-route stop (e.g. Memco, Shahibaug, Income Tax)..."
-                    value={newPointName}
-                    onChange={(e) => setNewPointName(e.target.value)}
-                    className="flex-1 bg-secondary/50 border border-border rounded-xl px-3.5 py-2 text-xs font-semibold text-foreground focus:outline-none focus:border-primary"
+                {/* Live suggest input */}
+                <div className="pt-2">
+                  <RoutePointSuggestInput
+                    placeholder="Search or type stop (e.g. Viratnagar, Memco, Shahibaug)..."
+                    onAdd={(name) => {
+                      setRoutePoints([
+                        ...routePoints,
+                        { name: name.trim(), sequence_order: routePoints.length + 1 }
+                      ]);
+                    }}
+                    buttonLabel="Add Stop"
                   />
-                  <button
-                    type="button"
-                    onClick={handleAddRoutePoint}
-                    className="px-4 py-2 bg-primary hover:bg-primary-hover text-primary-foreground font-bold text-xs rounded-xl shadow-glow flex items-center gap-1"
-                  >
-                    <Plus className="w-3.5 h-3.5" /> Add
-                  </button>
                 </div>
               </div>
             )}
 
-            {/* STEP 3: PREFERRED PICKUP & DROP POINTS */}
+            {/* STEP 3: PREFERRED PICKUP & DROP */}
             {step === 3 && (
               <div className="space-y-5 animate-fadeIn">
                 {/* Pickups */}
-                <div>
-                  <div className="flex items-center justify-between mb-2">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
                     <label className="text-xs font-bold text-foreground flex items-center gap-1.5">
                       <MapPin className="w-3.5 h-3.5 text-primary" />
                       Preferred Pickup Locations (Max 5)
                     </label>
                     <span className="text-[10px] text-muted-foreground font-semibold">{preferredPickups.length}/5</span>
                   </div>
-                  <div className="flex flex-wrap gap-2 mb-2">
+                  <div className="flex flex-wrap gap-1.5 min-h-[32px]">
                     {preferredPickups.map((p, idx) => (
-                      <span key={idx} className="px-2.5 py-1 rounded-lg bg-secondary border border-border text-foreground text-xs font-semibold flex items-center gap-1.5">
+                      <span key={idx} className="px-2.5 py-1 rounded-xl bg-secondary border border-border text-foreground text-xs font-semibold flex items-center gap-1.5">
                         {p.name}
-                        <button type="button" onClick={() => setPreferredPickups(preferredPickups.filter((_, i) => i !== idx))} className="hover:text-primary">✕</button>
+                        <button
+                          type="button"
+                          onClick={() => setPreferredPickups(preferredPickups.filter((_, i) => i !== idx))}
+                          className="hover:text-rose-600 font-bold ml-1"
+                        >
+                          ✕
+                        </button>
                       </span>
                     ))}
                   </div>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
+                  {preferredPickups.length < 5 && (
+                    <RoutePointSuggestInput
                       placeholder="e.g. Near Naroda Bridge, Memco BRTS Gate..."
-                      value={newPickupName}
-                      onChange={(e) => setNewPickupName(e.target.value)}
-                      className="flex-1 bg-secondary/50 border border-border rounded-xl px-3 py-2 text-xs font-semibold text-foreground focus:outline-none focus:border-primary"
+                      onAdd={(name) => {
+                        setPreferredPickups([
+                          ...preferredPickups,
+                          { name: name.trim(), point_type: 'pickup', sequence_order: preferredPickups.length + 1 }
+                        ]);
+                      }}
+                      buttonLabel="Add Pickup"
                     />
-                    <button
-                      type="button"
-                      onClick={handleAddPreferredPickup}
-                      className="px-3 py-2 bg-primary hover:bg-primary-hover text-primary-foreground font-bold text-xs rounded-xl shadow-sm"
-                    >
-                      Add Pickup
-                    </button>
-                  </div>
+                  )}
                 </div>
 
                 {/* Drops */}
-                <div className="pt-3 border-t border-border">
-                  <div className="flex items-center justify-between mb-2">
+                <div className="pt-3 border-t border-border space-y-2">
+                  <div className="flex items-center justify-between">
                     <label className="text-xs font-bold text-foreground flex items-center gap-1.5">
-                      <MapPin className="w-3.5 h-3.5 text-orange-500" />
+                      <Navigation className="w-3.5 h-3.5 text-orange-500" />
                       Preferred Drop Locations (Max 5)
                     </label>
                     <span className="text-[10px] text-muted-foreground font-semibold">{preferredDrops.length}/5</span>
                   </div>
-                  <div className="flex flex-wrap gap-2 mb-2">
+                  <div className="flex flex-wrap gap-1.5 min-h-[32px]">
                     {preferredDrops.map((p, idx) => (
-                      <span key={idx} className="px-2.5 py-1 rounded-lg bg-secondary border border-border text-foreground text-xs font-semibold flex items-center gap-1.5">
+                      <span key={idx} className="px-2.5 py-1 rounded-xl bg-secondary border border-border text-foreground text-xs font-semibold flex items-center gap-1.5">
                         {p.name}
-                        <button type="button" onClick={() => setPreferredDrops(preferredDrops.filter((_, i) => i !== idx))} className="hover:text-primary">✕</button>
+                        <button
+                          type="button"
+                          onClick={() => setPreferredDrops(preferredDrops.filter((_, i) => i !== idx))}
+                          className="hover:text-rose-600 font-bold ml-1"
+                        >
+                          ✕
+                        </button>
                       </span>
                     ))}
                   </div>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
+                  {preferredDrops.length < 5 && (
+                    <RoutePointSuggestInput
                       placeholder="e.g. Gujarat University Gate, Vijay Cross Rd..."
-                      value={newDropName}
-                      onChange={(e) => setNewDropName(e.target.value)}
-                      className="flex-1 bg-secondary/50 border border-border rounded-xl px-3 py-2 text-xs font-semibold text-foreground focus:outline-none focus:border-primary"
+                      onAdd={(name) => {
+                        setPreferredDrops([
+                          ...preferredDrops,
+                          { name: name.trim(), point_type: 'drop', sequence_order: preferredDrops.length + 1 }
+                        ]);
+                      }}
+                      buttonLabel="Add Drop"
                     />
-                    <button
-                      type="button"
-                      onClick={handleAddPreferredDrop}
-                      className="px-3 py-2 bg-primary hover:bg-primary-hover text-primary-foreground font-bold text-xs rounded-xl shadow-sm"
-                    >
-                      Add Drop
-                    </button>
-                  </div>
+                  )}
                 </div>
               </div>
             )}
 
-            {/* STEP 4: SCHEDULE & PREFERENCES */}
+            {/* STEP 4: SCHEDULE, PREFERENCES & REVIEW */}
             {step === 4 && (
               <div className="space-y-4 animate-fadeIn">
                 {/* Days */}
                 <div>
-                  <label className="block text-xs font-semibold text-foreground mb-2">
+                  <label className="block text-xs font-bold text-foreground mb-2">
                     Commute Days *
                   </label>
                   <div className="flex flex-wrap gap-2">
@@ -378,7 +388,7 @@ export default function CreateCommute() {
                         className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
                           days.includes(d)
                             ? 'bg-primary text-primary-foreground shadow-glow'
-                            : 'bg-secondary text-muted-foreground border border-border'
+                            : 'bg-secondary text-muted-foreground border border-border hover:bg-slate-200'
                         }`}
                       >
                         {d}
@@ -387,28 +397,25 @@ export default function CreateCommute() {
                   </div>
                 </div>
 
-                {/* Timing */}
-                <div className="grid grid-cols-2 gap-3">
+                {/* Timing with Interactive Time Picker */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <TimePickerInput
+                    label="Departure Time *"
+                    value={departureTime}
+                    onChange={setDepartureTime}
+                    dropUp={true}
+                    required
+                  />
+
                   <div>
-                    <label className="block text-xs font-semibold text-foreground mb-1.5 flex items-center gap-1">
-                      <Clock className="w-3.5 h-3.5 text-amber-600" /> Departure Time *
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="8:30 AM"
-                      value={departureTime}
-                      onChange={(e) => setDepartureTime(e.target.value)}
-                      className="w-full bg-secondary/50 border border-border rounded-xl px-3.5 py-2 text-xs font-bold text-foreground focus:outline-none focus:border-primary"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-foreground mb-1.5">
-                      Flexibility (± Minutes)
+                    <label className="block text-xs font-bold text-foreground mb-1.5 flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-primary" />
+                      <span>Flexibility Window</span>
                     </label>
                     <select
                       value={flexibilityMinutes}
                       onChange={(e) => setFlexibilityMinutes(parseInt(e.target.value, 10))}
-                      className="w-full bg-secondary/50 border border-border rounded-xl px-3.5 py-2 text-xs font-semibold text-foreground focus:outline-none focus:border-primary"
+                      className="w-full bg-secondary/50 border border-border rounded-xl px-3.5 py-2.5 text-xs font-bold text-foreground focus:outline-none focus:border-primary cursor-pointer"
                     >
                       <option value="10">± 10 minutes</option>
                       <option value="15">± 15 minutes (Recommended)</option>
@@ -422,7 +429,7 @@ export default function CreateCommute() {
                 {commuteType === 'rider' && (
                   <div className="grid grid-cols-2 gap-3 pt-2 border-t border-border">
                     <div>
-                      <label className="block text-xs font-semibold text-foreground mb-1.5">
+                      <label className="block text-xs font-bold text-foreground mb-1.5">
                         Available Seats Offered
                       </label>
                       <input
@@ -435,7 +442,7 @@ export default function CreateCommute() {
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-foreground mb-1.5 flex items-center gap-1">
+                      <label className="block text-xs font-bold text-foreground mb-1.5 flex items-center gap-1">
                         <Fuel className="w-3.5 h-3.5 text-emerald-600" /> Petrol Split / Day (₹)
                       </label>
                       <input
@@ -451,13 +458,13 @@ export default function CreateCommute() {
               </div>
             )}
 
-            {/* Wizard Navigation */}
-            <div className="pt-4 border-t border-border flex items-center justify-between">
+            {/* Wizard Navigation Footer */}
+            <div className="pt-4 border-t border-border flex items-center justify-between gap-3">
               {step > 1 ? (
                 <button
                   type="button"
                   onClick={() => setStep(step - 1)}
-                  className="px-4 py-2.5 rounded-xl bg-secondary border border-border text-foreground font-semibold text-xs"
+                  className="px-4 py-2.5 rounded-xl bg-secondary border border-border hover:bg-slate-200 text-foreground font-bold text-xs transition-all"
                 >
                   Previous
                 </button>
@@ -476,19 +483,19 @@ export default function CreateCommute() {
                   type="button"
                   onClick={handleSubmitCommute}
                   disabled={loading}
-                  className="px-7 py-3 rounded-xl bg-primary hover:bg-primary-hover text-primary-foreground font-bold text-xs shadow-glow flex items-center gap-1.5 transition-all disabled:opacity-50"
+                  className="px-7 py-3 rounded-xl bg-primary hover:bg-primary-hover text-primary-foreground font-bold text-xs shadow-glow flex items-center gap-2 transition-all disabled:opacity-50"
                 >
                   <Sparkles className="w-4 h-4" />
-                  {loading ? 'Creating Commute via Edge Function...' : 'Save Commute & Find Matches'}
+                  {loading ? 'Creating Commute...' : 'Publish Corridor & Find Matches'}
                 </button>
               )}
             </div>
           </div>
 
-          {/* Right Side: Live Leaflet Map Preview */}
+          {/* Right Column: Interactive Leaflet Route Map Preview */}
           <div className="lg:col-span-5 space-y-4">
-            <div className="bg-card border border-border rounded-3xl p-5 shadow-card">
-              <div className="flex items-center justify-between mb-3 text-xs">
+            <div className="bg-card border border-border rounded-3xl p-5 shadow-card space-y-3">
+              <div className="flex items-center justify-between text-xs">
                 <span className="font-bold text-foreground flex items-center gap-1.5">
                   <Navigation className="w-4 h-4 text-primary" /> Interactive Route Map
                 </span>
@@ -497,28 +504,35 @@ export default function CreateCommute() {
                 </span>
               </div>
 
-              <LeafletRouteMap
-                startLocation={startLocation}
-                destLocation={destinationLocation}
-                routePoints={commuteType === 'rider' ? routePoints : []}
-                preferredPickups={preferredPickups}
-                preferredDrops={preferredDrops}
-                height="340px"
-              />
+              <div className="rounded-2xl overflow-hidden border border-border h-72 shadow-inner">
+                <LeafletRouteMap
+                  startLocation={startLocation}
+                  destLocation={destinationLocation}
+                  routePoints={commuteType === 'rider' ? routePoints : []}
+                  preferredPickups={preferredPickups}
+                  preferredDrops={preferredDrops}
+                  height="100%"
+                />
+              </div>
 
-              <div className="mt-4 p-3 rounded-xl bg-secondary/40 border border-border text-xs text-muted-foreground space-y-1">
-                <div className="flex justify-between font-medium">
-                  <span>Start: <strong className="text-foreground">{startLocation}</strong></span>
-                  <span>End: <strong className="text-foreground">{destinationLocation}</strong></span>
+              <div className="p-3.5 rounded-2xl bg-secondary/40 border border-border text-xs text-muted-foreground space-y-1.5">
+                <div className="flex justify-between font-bold text-foreground">
+                  <span>Start: <strong className="text-primary">{startLocation}</strong></span>
+                  <span>End: <strong className="text-primary">{destinationLocation}</strong></span>
                 </div>
-                <div className="text-[11px] text-primary font-bold">
-                  {commuteType === 'rider' ? `${routePoints.length} Sequenced Stops` : 'Direct Segment Request'}
+                <div className="flex items-center justify-between text-[11px]">
+                  <span className="text-primary font-bold">
+                    {commuteType === 'rider' ? `${routePoints.length} Intermediate Stops` : 'Direct Segment Request'}
+                  </span>
+                  <span className="font-semibold text-foreground">
+                    {departureTime} • {days.length} Days/Wk
+                  </span>
                 </div>
               </div>
             </div>
           </div>
         </div>
-      </main>
-    </div>
+      </div>
+    </DashboardLayout>
   );
 }

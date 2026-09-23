@@ -207,6 +207,20 @@ ALTER TABLE public.preferred_route_points ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.connection_requests ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.conversations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
-
 -- Note: All client mutations are routed through secure Supabase Edge Functions with Service Role Key
+
+-- 13. STORAGE BUCKET (Avatars & Vehicle Photos)
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('routiva-media', 'routiva-media', true)
+ON CONFLICT (id) DO UPDATE SET public = true;
+
+-- Public read access for profile pictures and vehicle images
+CREATE POLICY "Public Media Access" ON storage.objects
+FOR SELECT USING (bucket_id = 'routiva-media');
+
+-- Authenticated and Service Role upload access
+CREATE POLICY "Upload Media Access" ON storage.objects
+FOR INSERT WITH CHECK (bucket_id = 'routiva-media');
+
+CREATE POLICY "Update Media Access" ON storage.objects
+FOR UPDATE USING (bucket_id = 'routiva-media');

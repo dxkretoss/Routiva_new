@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { RefreshCw, Route, Info } from 'lucide-react';
-import Navbar from '../components/Navbar';
-import BottomNav from '../components/BottomNav';
+import DashboardLayout from '../components/DashboardLayout';
 import MatchResultCard from '../components/MatchResultCard';
 import { useCommute } from '../context/CommuteContext';
 
@@ -12,22 +11,18 @@ export default function MatchesPage() {
   const filteredMatches = matches.filter((m) => m.matchScore >= minScore);
 
   return (
-    <div className="min-h-screen bg-background text-foreground pb-24 md:pb-12">
-      <Navbar />
-
-      <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-28">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+    <DashboardLayout
+      title="Find Compatible Matches"
+      subtitle={activeCommute ? `${activeCommute.start_location} → ${activeCommute.destination_location}` : 'Ahmedabad Corridor'}
+    >
+      <div className="space-y-6">
+        {/* Header Actions */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <div className="flex items-center gap-2">
-              <span className="px-2.5 py-0.5 rounded-full bg-secondary text-secondary-foreground text-[10px] font-bold uppercase tracking-wider border border-border">
-                Route Matching Engine
-              </span>
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-black text-foreground tracking-tight mt-1">
+            <h1 className="text-xl sm:text-2xl font-black text-foreground tracking-tight">
               Live Compatible Commute Partners
             </h1>
-            <p className="text-xs sm:text-sm text-muted-foreground mt-1 font-medium">
+            <p className="text-xs text-muted-foreground mt-0.5 font-medium">
               Matching for: <strong className="text-foreground">{activeCommute ? `${activeCommute.start_location} → ${activeCommute.destination_location}` : 'Default Route'}</strong>
             </p>
           </div>
@@ -43,7 +38,7 @@ export default function MatchesPage() {
         </div>
 
         {/* Informational Banner on Partial Matching */}
-        <div className="p-4 rounded-2xl bg-orange-50 border border-primary/30 text-xs text-foreground mb-8 flex items-start gap-3 shadow-sm">
+        <div className="p-4 rounded-2xl bg-orange-50 border border-primary/30 text-xs text-foreground flex items-start gap-3 shadow-sm">
           <Info className="w-5 h-5 text-primary shrink-0 mt-0.5" />
           <p className="font-medium">
             <strong>Core Matching Principle:</strong> You are matched if your journey overlaps the Rider's full route. 
@@ -75,9 +70,7 @@ export default function MatchesPage() {
             ))}
           </div>
         )}
-      </main>
-
-      <BottomNav />
-    </div>
+      </div>
+    </DashboardLayout>
   );
 }

@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 
 export default function RiderSection() {
   const navigate = useNavigate();
-  const { isAuthenticated, loginAsDemo } = useAuth();
+  const { isAuthenticated } = useAuth();
 
   const handleOfferRide = () => {
     if (isAuthenticated) {
@@ -67,13 +67,6 @@ export default function RiderSection() {
                   <Car className="w-4 h-4" />
                   Offer a Ride
                   <ArrowRight className="w-4 h-4" />
-                </button>
-
-                <button
-                  onClick={() => { loginAsDemo('rider'); navigate('/dashboard'); }}
-                  className="px-4 py-3.5 rounded-2xl bg-card border border-border hover:border-primary text-foreground text-xs font-bold shadow-sm"
-                >
-                  Preview Rider Experience →
                 </button>
               </div>
             </div>

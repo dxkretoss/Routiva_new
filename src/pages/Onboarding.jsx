@@ -5,28 +5,37 @@ import {
   Search, 
   ArrowRight, 
   User, 
-  Repeat,
-  Camera,
-  UploadCloud,
-  CheckCircle2,
-  Image as ImageIcon
+  Camera, 
+  UploadCloud, 
+  CheckCircle2, 
+  Sparkles, 
+  ShieldCheck, 
+  Route,
+  Briefcase,
+  Building,
+  GraduationCap
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext';
 import { invokeEdgeFunction } from '../lib/edgeFunctions';
+import SearchableLocalitySelect from '../components/SearchableLocalitySelect';
+import SearchableProfessionSelect from '../components/SearchableProfessionSelect';
 
 export default function Onboarding() {
   const [searchParams] = useSearchParams();
-  const initialRole = searchParams.get('role') || 'seeker';
   const navigate = useNavigate();
   const { user, profile, vehicle, updateProfile } = useAuth();
   const { addToast } = useNotifications();
 
+  // Role is strictly 'rider' or 'seeker', passed from registration or session
+  const roleParam = searchParams.get('role') || user?.role || 'rider';
+  const role = roleParam === 'seeker' ? 'seeker' : 'rider';
+
+  // For Rider: 2 Steps (1. Profile, 2. Vehicle). For Seeker: 1 Step (1. Profile)
+  const totalSteps = role === 'rider' ? 2 : 1;
   const [step, setStep] = useState(1);
-  const [role, setRole] = useState(initialRole);
   const [loading, setLoading] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
-  const [uploadingVehicle, setUploadingVehicle] = useState(false);
 
   // Helper to extract best initial name
   const getInitialName = () => {
@@ -44,6 +53,8 @@ export default function Onboarding() {
     return '';
   };
 
+  const initialProfession = profile?.profession || 'Corporate Employee';
+
   // Profile Form Data
   const [profileData, setProfileData] = useState({
     full_name: getInitialName(),
@@ -53,9 +64,10 @@ export default function Onboarding() {
     bio: profile?.bio || '',
     home_locality: profile?.home_locality || 'Nikol',
     work_locality: profile?.work_locality || 'Thaltej',
-    profession: profile?.profession || 'Software Engineer',
+    profession: initialProfession,
     company_name: profile?.company_name || 'Tech Park Ltd',
     work_email: profile?.work_email || '',
+    city: profile?.city || 'Ahmedabad',
     is_corporate_verified: profile?.is_corporate_verified || false
   });
 
@@ -79,7 +91,7 @@ export default function Onboarding() {
     brand: vehicle?.brand || 'Hyundai',
     model: vehicle?.model || 'i20',
     colour: vehicle?.colour || 'Polar White',
-    registration_number: vehicle?.registration_number || 'GJ01-XX-1234',
+    registration_number: vehicle?.registration_number || 'GJ 01 XX 1234',
     available_seats: vehicle?.available_seats || 2,
     has_ac: vehicle?.has_ac ?? true,
     smoking_allowed: vehicle?.smoking_allowed ?? false,
@@ -120,50 +132,38 @@ export default function Onboarding() {
     reader.readAsDataURL(file);
   };
 
-  const handleVehiclePhotoUpload = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (file.size > 5 * 1024 * 1024) {
-      addToast('Image size should be less than 5MB', 'error');
-      return;
-    }
-    setUploadingVehicle(true);
-    const reader = new FileReader();
-    reader.onload = async () => {
-      const base64 = reader.result;
-      try {
-        const res = await invokeEdgeFunction('upload-image', {
-          userId: user?.id,
-          imageBase64: base64,
-          bucket: 'routiva-media',
-          folder: 'vehicles'
-        });
-        if (res?.success && res.imageUrl) {
-          setVehicleData((prev) => ({ ...prev, vehicle_image_url: res.imageUrl }));
-          addToast('Vehicle photo uploaded!', 'success');
-        } else {
-          setVehicleData((prev) => ({ ...prev, vehicle_image_url: base64 }));
-        }
-      } catch (err) {
-        setVehicleData((prev) => ({ ...prev, vehicle_image_url: base64 }));
-      } finally {
-        setUploadingVehicle(false);
-      }
-    };
-    reader.readAsDataURL(file);
-  };
+
 
   const handleNext = (e) => {
-    e.preventDefault();
+    e?.preventDefault();
     if (step === 1) {
-      setStep(2);
-    } else if (step === 2) {
+      if (!profileData.full_name?.trim()) {
+        addToast('Please enter your full name.', 'error');
+        return;
+      }
+      if (!profileData.profession?.trim()) {
+        addToast('Please select or enter your profession.', 'error');
+        return;
+      }
+      if (!profileData.home_locality?.trim()) {
+        addToast('Please select or enter your residential locality.', 'error');
+        return;
+      }
+      if (!profileData.work_locality?.trim()) {
+        addToast('Please select or enter your work/office locality.', 'error');
+        return;
+      }
+
       if (role === 'seeker') {
         handleSubmit();
       } else {
-        setStep(3); // Vehicle details
+        setStep(2);
       }
-    } else if (step === 3) {
+    } else if (step === 2) {
+      if (!vehicleData.brand?.trim() || !vehicleData.model?.trim() || !vehicleData.registration_number?.trim()) {
+        addToast('Please fill in required vehicle brand, model, and registration number.', 'error');
+        return;
+      }
       handleSubmit();
     }
   };
@@ -171,28 +171,130 @@ export default function Onboarding() {
   const handleSubmit = async () => {
     setLoading(true);
     try {
-      const res = await updateProfile(profileData, role !== 'seeker' ? vehicleData : null);
+      const res = await updateProfile(profileData, role, role === 'rider' ? vehicleData : null);
       if (res?.success) {
-        addToast('Welcome aboard! Let us create your first recurring commute.', 'success');
+        addToast('Profile setup complete! Create your daily commute route.', 'success');
         navigate('/create-commute');
       } else {
-        addToast(res?.error || 'Could not save details.', 'error');
+        addToast(res?.error || 'Could not save profile details.', 'error');
       }
     } catch (err) {
       console.error(err);
+      addToast('An error occurred while saving setup.', 'error');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
-      {/* Background Glow */}
-      <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[550px] h-[350px] bg-primary/10 rounded-full blur-[110px] pointer-events-none"></div>
+    <div className="min-h-screen bg-background text-foreground grid grid-cols-1 lg:grid-cols-12">
+      {/* LEFT SIDE: Platform Graphic & Commute Setup Showcase (Desktop) */}
+      <div className="hidden lg:flex lg:col-span-5 xl:col-span-5 bg-gradient-to-b from-secondary/80 via-secondary/40 to-background border-r border-border p-8 xl:p-12 flex-col justify-between sticky top-0 h-screen overflow-hidden">
+        {/* Ambient Glows */}
+        <div className="absolute top-10 left-10 w-72 h-72 bg-primary/15 rounded-full blur-[100px] pointer-events-none"></div>
+        <div className="absolute bottom-10 right-10 w-72 h-72 bg-orange-400/15 rounded-full blur-[100px] pointer-events-none"></div>
 
-      <div className="max-w-xl w-full mx-auto relative z-10">
-        {/* Brand Logo */}
-        <div className="text-center mb-6">
+        {/* Top Logo */}
+        <div className="relative z-10">
+          <Link to="/" className="inline-block group">
+            <img
+              src="/assets/images/routiva-logo-desktop.png"
+              alt="Routiva Logo"
+              className="h-9 w-auto object-contain transition-transform group-hover:scale-105"
+            />
+          </Link>
+        </div>
+
+        {/* Center Showcase Content */}
+        <div className="my-auto py-6 relative z-10 space-y-5 max-w-lg">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-secondary border border-border text-secondary-foreground text-xs font-bold shadow-sm">
+            <Sparkles className="w-3.5 h-3.5 text-primary" />
+            <span>Step {step} of {totalSteps} • {step === 1 ? 'Profile Setup' : 'Vehicle Setup'}</span>
+          </div>
+
+          <h1 className="text-3xl xl:text-4xl font-black text-foreground tracking-tight leading-tight">
+            {step === 1 ? (
+              <>
+                Complete your profile. <br />
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-orange-500">
+                  Build verified trust.
+                </span>
+              </>
+            ) : (
+              <>
+                Add vehicle details. <br />
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-orange-500">
+                  Share empty seats easily.
+                </span>
+              </>
+            )}
+          </h1>
+
+          <p className="text-muted-foreground text-xs sm:text-sm leading-relaxed font-medium">
+            {step === 1 
+              ? 'Your profile establishes mutual trust and helps pair you with verified coworkers and commuters along your exact corridor in Ahmedabad & Gandhinagar.'
+              : 'Specify your vehicle model, seat capacity, and amenities so daily seekers know what to expect on their shared ride.'}
+          </p>
+
+          {/* Interactive Feature Showcase Cards */}
+          <div className="bg-card border border-border rounded-2xl p-4 sm:p-5 shadow-card space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span className="text-xs font-bold text-foreground">
+                  {role === 'rider' ? 'Vehicle Owner Perks' : 'Daily Seeker Perks'}
+                </span>
+              </div>
+              <span className="text-[10px] font-bold text-primary bg-secondary px-2.5 py-0.5 rounded-full border border-border">
+                Ahmedabad Corridor
+              </span>
+            </div>
+
+            <div className="space-y-2 text-xs font-semibold">
+              <div className="flex items-center gap-2.5 p-2 rounded-xl bg-secondary/50 border border-border">
+                <div className="p-1 rounded-lg bg-card text-primary border border-border shrink-0">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
+                </div>
+                <span className="text-foreground text-xs font-medium">
+                  {role === 'rider' ? 'Recover ₹3,000–₹5,000 in monthly petrol costs' : 'Save up to 65% compared to surge daily cab rides'}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2.5 p-2 rounded-xl bg-secondary/50 border border-border">
+                <div className="p-1 rounded-lg bg-card text-primary border border-border shrink-0">
+                  <Route className="w-3.5 h-3.5 text-primary" />
+                </div>
+                <span className="text-foreground text-xs font-medium">
+                  Intermediate route matching — drop partners along your path
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2.5 p-2 rounded-xl bg-secondary/50 border border-border">
+                <div className="p-1 rounded-lg bg-card text-primary border border-border shrink-0">
+                  <ShieldCheck className="w-3.5 h-3.5 text-primary" />
+                </div>
+                <span className="text-foreground text-xs font-medium">
+                  100% verified corporate & office commuter community
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Bottom Safety & Trust */}
+        <div className="pt-4 border-t border-border/80 flex items-center justify-between text-xs text-muted-foreground font-medium relative z-10">
+          <span className="flex items-center gap-1.5">
+            <ShieldCheck className="w-4 h-4 text-primary" />
+            Verified & Privacy Protected
+          </span>
+          <span className="font-bold text-foreground">Routiva Commute</span>
+        </div>
+      </div>
+
+      {/* RIGHT SIDE: Onboarding Steps Form */}
+      <div className="col-span-12 lg:col-span-7 xl:col-span-7 flex flex-col justify-center items-center px-4 sm:px-8 xl:px-14 py-8 sm:py-12 relative min-h-screen">
+        {/* Mobile Header Logo */}
+        <div className="lg:hidden text-center mb-6 w-full">
           <Link to="/" className="inline-block group">
             <img 
               src="/assets/images/routiva-logo-desktop.png" 
@@ -202,369 +304,276 @@ export default function Onboarding() {
           </Link>
         </div>
 
-        {/* Progress header */}
-        <div className="mb-8 text-center">
-          <span className="text-xs font-bold uppercase tracking-wider text-primary bg-secondary px-3 py-1 rounded-full border border-border">
-            Step {step} of {role === 'seeker' ? 2 : 3} • Commuter Setup
-          </span>
-          <h1 className="text-2xl sm:text-3xl font-black text-foreground mt-3">
-            {step === 1 && 'Choose Your Commute Role'}
-            {step === 2 && 'Complete Your Profile'}
-            {step === 3 && 'Add Your Vehicle Details'}
-          </h1>
-          <p className="text-xs sm:text-sm text-muted-foreground mt-1 font-medium">
-            {step === 1 && 'Tell us how you plan to travel every morning'}
-            {step === 2 && 'This helps us find compatible office commuters'}
-            {step === 3 && 'Specify vehicle capacity and comfort for shared rides'}
-          </p>
-        </div>
-
-        {/* Step Card */}
-        <div className="bg-card border border-border rounded-3xl p-6 sm:p-8 shadow-card">
-          {/* STEP 1: ROLE SELECTION */}
-          {step === 1 && (
-            <div className="space-y-4 animate-fadeIn">
-              <div
-                onClick={() => setRole('rider')}
-                className={`p-5 rounded-2xl border-2 cursor-pointer transition-all flex items-center justify-between ${
-                  role === 'rider'
-                    ? 'bg-secondary border-primary shadow-sm'
-                    : 'bg-card border-border hover:border-slate-300'
-                }`}
-              >
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-secondary text-primary flex items-center justify-center font-bold border border-border shadow-sm">
-                    <Car className="w-6 h-6 text-primary" />
-                  </div>
-                  <div>
-                    <h3 className="text-base font-bold text-foreground">Rider (Vehicle Owner)</h3>
-                    <p className="text-xs text-muted-foreground mt-0.5 font-medium">I drive daily and want to share empty seats to split petrol</p>
-                  </div>
-                </div>
-                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                  role === 'rider' ? 'border-primary bg-primary' : 'border-slate-300'
-                }`}>
-                  {role === 'rider' && <div className="w-2 h-2 rounded-full bg-white" />}
-                </div>
-              </div>
-
-              <div
-                onClick={() => setRole('seeker')}
-                className={`p-5 rounded-2xl border-2 cursor-pointer transition-all flex items-center justify-between ${
-                  role === 'seeker'
-                    ? 'bg-secondary border-primary shadow-sm'
-                    : 'bg-card border-border hover:border-slate-300'
-                }`}
-              >
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-secondary text-primary flex items-center justify-center font-bold border border-border shadow-sm">
-                    <User className="w-6 h-6 text-primary" />
-                  </div>
-                  <div>
-                    <h3 className="text-base font-bold text-foreground">Seeker (Need a Daily Ride)</h3>
-                    <p className="text-xs text-muted-foreground mt-0.5 font-medium">I want a dependable daily ride without surge cab prices</p>
-                  </div>
-                </div>
-                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                  role === 'seeker' ? 'border-primary bg-primary' : 'border-slate-300'
-                }`}>
-                  {role === 'seeker' && <div className="w-2 h-2 rounded-full bg-white" />}
-                </div>
-              </div>
-
-              <div
-                onClick={() => setRole('both')}
-                className={`p-5 rounded-2xl border-2 cursor-pointer transition-all flex items-center justify-between ${
-                  role === 'both'
-                    ? 'bg-secondary border-primary shadow-sm'
-                    : 'bg-card border-border hover:border-slate-300'
-                }`}
-              >
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-secondary text-primary flex items-center justify-center font-bold border border-border shadow-sm">
-                    <Repeat className="w-6 h-6 text-primary" />
-                  </div>
-                  <div>
-                    <h3 className="text-base font-bold text-foreground">Both (Drive some days, Ride others)</h3>
-                    <p className="text-xs text-muted-foreground mt-0.5 font-medium">Flexible commute role according to my schedule</p>
-                  </div>
-                </div>
-                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                  role === 'both' ? 'border-primary bg-primary' : 'border-slate-300'
-                }`}>
-                  {role === 'both' && <div className="w-2 h-2 rounded-full bg-white" />}
-                </div>
-              </div>
+        <div className="w-full max-w-xl space-y-5">
+          {/* Progress Header */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-primary bg-secondary px-2.5 py-0.5 rounded-full border border-border">
+                Step {step} of {totalSteps} • {role === 'rider' ? 'Rider Onboarding' : 'Seeker Onboarding'}
+              </span>
+              <span className="text-xs font-bold text-muted-foreground">
+                {totalSteps === 1 ? '100%' : (step === 1 ? '50%' : '100%')} Complete
+              </span>
             </div>
-          )}
 
-          {/* STEP 2: PROFILE DETAILS */}
-          {step === 2 && (
-            <div className="space-y-4 animate-fadeIn">
-              {/* Avatar Profile Photo Upload */}
-              <div className="flex items-center gap-4 p-4 rounded-2xl bg-secondary/30 border border-border">
-                <div className="relative w-16 h-16 rounded-2xl bg-secondary border border-border overflow-hidden flex items-center justify-center shrink-0 shadow-sm">
-                  {profileData.avatar_url ? (
-                    <img src={profileData.avatar_url} alt="Profile Preview" className="w-full h-full object-cover" />
-                  ) : (
-                    <User className="w-8 h-8 text-muted-foreground" />
-                  )}
-                  {uploadingAvatar && (
-                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    </div>
-                  )}
+            <div className="w-full h-1.5 bg-secondary rounded-full overflow-hidden border border-border">
+              <div 
+                className="h-full bg-gradient-to-r from-primary to-orange-500 rounded-full transition-all duration-300"
+                style={{ width: totalSteps === 1 ? '100%' : (step === 1 ? '50%' : '100%') }}
+              ></div>
+            </div>
+
+            <h2 className="text-2xl sm:text-3xl font-black text-foreground pt-1.5 tracking-tight">
+              {step === 1 ? 'Complete Your Profile' : 'Add Your Vehicle Details'}
+            </h2>
+            <p className="text-xs sm:text-sm text-muted-foreground font-medium">
+              {step === 1 
+                ? 'This helps us find compatible office commuters along your path' 
+                : 'Specify vehicle capacity and comfort for shared rides'}
+            </p>
+          </div>
+
+          {/* Form Card */}
+          <div className="bg-card border border-border rounded-3xl p-5 sm:p-7 shadow-card space-y-4">
+            {/* STEP 1: PROFILE DETAILS */}
+            {step === 1 && (
+              <div className="space-y-4 animate-fadeIn">
+                {/* Avatar Profile Photo Upload */}
+                <div className="flex items-center gap-4 p-4 rounded-2xl bg-secondary/30 border border-border">
+                  <div className="relative w-16 h-16 rounded-2xl bg-secondary border border-border overflow-hidden flex items-center justify-center shrink-0 shadow-sm">
+                    {profileData.avatar_url ? (
+                      <img src={profileData.avatar_url} alt="Profile Preview" className="w-full h-full object-cover" />
+                    ) : (
+                      <User className="w-8 h-8 text-muted-foreground" />
+                    )}
+                    {uploadingAvatar && (
+                      <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <span className="block text-xs font-bold text-foreground">Profile Photo</span>
+                    <span className="text-[11px] text-muted-foreground block mb-1.5 font-medium">Upload a clear photo for identity verification</span>
+                    <label className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-card border border-border hover:border-primary text-xs font-bold text-foreground cursor-pointer transition-all shadow-sm">
+                      <Camera className="w-3.5 h-3.5 text-primary" />
+                      <span>{profileData.avatar_url ? 'Change Photo' : 'Upload Avatar'}</span>
+                      <input type="file" accept="image/*" onChange={handleAvatarUpload} className="hidden" />
+                    </label>
+                  </div>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <span className="block text-xs font-bold text-foreground">Profile Photo</span>
-                  <span className="text-[11px] text-muted-foreground block mb-1.5 font-medium">Upload a clear photo for identity verification</span>
-                  <label className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-card border border-border hover:border-primary text-xs font-bold text-foreground cursor-pointer transition-all shadow-sm">
-                    <Camera className="w-3.5 h-3.5 text-primary" />
-                    <span>{profileData.avatar_url ? 'Change Photo' : 'Upload Avatar'}</span>
-                    <input type="file" accept="image/*" onChange={handleAvatarUpload} className="hidden" />
-                  </label>
-                </div>
-              </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-foreground mb-1.5">
-                  Full Name *
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Rahul Sharma"
-                  value={profileData.full_name}
-                  onChange={(e) => setProfileData({ ...profileData, full_name: e.target.value })}
-                  className="w-full bg-secondary/50 border border-border rounded-xl px-3.5 py-2.5 text-xs font-bold text-foreground focus:outline-none focus:border-primary"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-foreground mb-1.5">
-                    Age
-                  </label>
-                  <input
-                    type="number"
-                    value={profileData.age}
-                    onChange={(e) => setProfileData({ ...profileData, age: parseInt(e.target.value, 10) })}
-                    className="w-full bg-secondary/50 border border-border rounded-xl px-3.5 py-2.5 text-xs font-bold text-foreground focus:outline-none focus:border-primary"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-foreground mb-1.5">
-                    Gender
-                  </label>
-                  <select
-                    value={profileData.gender}
-                    onChange={(e) => setProfileData({ ...profileData, gender: e.target.value })}
-                    className="w-full bg-secondary/50 border border-border rounded-xl px-3.5 py-2.5 text-xs font-bold text-foreground focus:outline-none focus:border-primary"
-                  >
-                    <option value="male">Male</option>
-                    <option value="female">Female</option>
-                    <option value="other">Other</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-foreground mb-1.5">
-                    Profession / Job Title
+                    Full Name *
                   </label>
                   <input
                     type="text"
-                    placeholder="e.g. Software Engineer"
+                    required
+                    placeholder="e.g. Rahul Sharma"
+                    value={profileData.full_name}
+                    onChange={(e) => setProfileData({ ...profileData, full_name: e.target.value })}
+                    className="w-full bg-secondary/50 border border-border rounded-xl px-3.5 py-2.5 text-xs font-bold text-foreground focus:outline-none focus:border-primary"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-foreground mb-1.5">
+                      Age
+                    </label>
+                    <input
+                      type="number"
+                      value={profileData.age}
+                      onChange={(e) => setProfileData({ ...profileData, age: parseInt(e.target.value, 10) || 18 })}
+                      className="w-full bg-secondary/50 border border-border rounded-xl px-3.5 py-2.5 text-xs font-bold text-foreground focus:outline-none focus:border-primary"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-foreground mb-1.5">
+                      Gender
+                    </label>
+                    <select
+                      value={profileData.gender}
+                      onChange={(e) => setProfileData({ ...profileData, gender: e.target.value })}
+                      className="w-full bg-secondary/50 border border-border rounded-xl px-3.5 py-2.5 text-xs font-bold text-foreground focus:outline-none focus:border-primary"
+                    >
+                      <option value="male">Male</option>
+                      <option value="female">Female</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Profession (Searchable Dropdown with High-Level Roles & Custom Input) + City */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <SearchableProfessionSelect
+                    label="Profession / Job Category *"
                     value={profileData.profession}
-                    onChange={(e) => setProfileData({ ...profileData, profession: e.target.value })}
-                    className="w-full bg-secondary/50 border border-border rounded-xl px-3.5 py-2.5 text-xs font-bold text-foreground focus:outline-none focus:border-primary"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-foreground mb-1.5">
-                    City
-                  </label>
-                  <select
-                    value={profileData.city}
-                    onChange={(e) => setProfileData({ ...profileData, city: e.target.value })}
-                    className="w-full bg-secondary/50 border border-border rounded-xl px-3.5 py-2.5 text-xs font-bold text-foreground focus:outline-none focus:border-primary"
-                  >
-                    <option value="Ahmedabad">Ahmedabad</option>
-                    <option value="Gandhinagar">Gandhinagar</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-foreground mb-1.5">
-                    Residential Area *
-                  </label>
-                  <input
-                    type="text"
+                    onChange={(val) => setProfileData(prev => ({ ...prev, profession: val }))}
+                    placeholder="Select or enter your profession..."
                     required
-                    placeholder="e.g. Nikol, Naroda, Bapunagar"
-                    value={profileData.home_locality || ''}
-                    onChange={(e) => setProfileData({ ...profileData, home_locality: e.target.value })}
-                    className="w-full bg-secondary/50 border border-border rounded-xl px-3.5 py-2.5 text-xs font-bold text-foreground focus:outline-none focus:border-primary"
                   />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-foreground mb-1.5">
-                    Work Locality *
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Thaltej, SG Highway, GIFT City"
-                    value={profileData.work_locality || ''}
-                    onChange={(e) => setProfileData({ ...profileData, work_locality: e.target.value })}
-                    className="w-full bg-secondary/50 border border-border rounded-xl px-3.5 py-2.5 text-xs font-bold text-foreground focus:outline-none focus:border-primary"
-                  />
-                </div>
-              </div>
-            </div>
-          )}
 
-          {/* STEP 3: VEHICLE DETAILS (IF RIDER) */}
-          {step === 3 && (
-            <div className="space-y-4 animate-fadeIn">
-              {/* Vehicle Photo Upload */}
-              <div className="flex items-center gap-4 p-4 rounded-2xl bg-secondary/30 border border-border">
-                <div className="relative w-20 h-14 rounded-2xl bg-secondary border border-border overflow-hidden flex items-center justify-center shrink-0 shadow-sm">
-                  {vehicleData.vehicle_image_url ? (
-                    <img src={vehicleData.vehicle_image_url} alt="Vehicle Preview" className="w-full h-full object-cover" />
-                  ) : (
-                    <Car className="w-6 h-6 text-primary" />
-                  )}
-                  {uploadingVehicle && (
-                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    </div>
-                  )}
+                  <div>
+                    <label className="block text-xs font-semibold text-foreground mb-1.5 flex items-center gap-1.5">
+                      <Building className="w-3.5 h-3.5 text-primary" />
+                      <span>City</span>
+                    </label>
+                    <select
+                      value={profileData.city}
+                      onChange={(e) => setProfileData({ ...profileData, city: e.target.value })}
+                      className="w-full bg-secondary/50 border border-border rounded-xl px-3.5 py-2.5 text-xs font-bold text-foreground focus:outline-none focus:border-primary cursor-pointer"
+                    >
+                      <option value="Ahmedabad">Ahmedabad</option>
+                      <option value="Gandhinagar">Gandhinagar</option>
+                    </select>
+                  </div>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <span className="block text-xs font-bold text-foreground">Vehicle Photo</span>
-                  <span className="text-[11px] text-muted-foreground block mb-1.5 font-medium">Upload photo of your car/bike</span>
-                  <label className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-card border border-border hover:border-primary text-xs font-bold text-foreground cursor-pointer transition-all shadow-sm">
-                    <UploadCloud className="w-3.5 h-3.5 text-primary" />
-                    <span>{vehicleData.vehicle_image_url ? 'Change Vehicle Photo' : 'Upload Photo'}</span>
-                    <input type="file" accept="image/*" onChange={handleVehiclePhotoUpload} className="hidden" />
-                  </label>
-                </div>
-              </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-foreground mb-1.5">
-                    Vehicle Type
-                  </label>
-                  <select
-                    value={vehicleData.vehicle_type}
-                    onChange={(e) => setVehicleData({ ...vehicleData, vehicle_type: e.target.value })}
-                    className="w-full bg-secondary/50 border border-border rounded-xl px-3.5 py-2.5 text-xs font-bold text-foreground focus:outline-none focus:border-primary"
-                  >
-                    <option value="car">Car (Petrol/Diesel/CNG)</option>
-                    <option value="ev_car">EV Car</option>
-                    <option value="bike">Motorcycle / Bike</option>
-                    <option value="scooter">Scooter / Activa</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-foreground mb-1.5">
-                    Available Commute Seats *
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    max="6"
-                    value={vehicleData.available_seats}
-                    onChange={(e) => setVehicleData({ ...vehicleData, available_seats: parseInt(e.target.value, 10) })}
-                    className="w-full bg-secondary/50 border border-border rounded-xl px-3.5 py-2.5 text-xs font-bold text-foreground focus:outline-none focus:border-primary"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-foreground mb-1.5">
-                    Brand *
-                  </label>
-                  <input
-                    type="text"
+                {/* Residential & Work Localities with Searchable Dropdowns */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                  <SearchableLocalitySelect
+                    label="Residential Locality *"
+                    value={profileData.home_locality}
+                    onChange={(val) => setProfileData(prev => ({ ...prev, home_locality: val }))}
+                    placeholder="Search or pick residential area..."
+                    dropUp={true}
                     required
-                    placeholder="e.g. Hyundai, Tata, Honda"
-                    value={vehicleData.brand}
-                    onChange={(e) => setVehicleData({ ...vehicleData, brand: e.target.value })}
-                    className="w-full bg-secondary/50 border border-border rounded-xl px-3.5 py-2.5 text-xs font-bold text-foreground focus:outline-none focus:border-primary"
                   />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-foreground mb-1.5">
-                    Model *
-                  </label>
-                  <input
-                    type="text"
+
+                  <SearchableLocalitySelect
+                    label="Work / Office Locality *"
+                    value={profileData.work_locality}
+                    onChange={(val) => setProfileData(prev => ({ ...prev, work_locality: val }))}
+                    placeholder="Search or pick office area..."
+                    dropUp={true}
                     required
-                    placeholder="e.g. i20, Nexon, City"
-                    value={vehicleData.model}
-                    onChange={(e) => setVehicleData({ ...vehicleData, model: e.target.value })}
-                    className="w-full bg-secondary/50 border border-border rounded-xl px-3.5 py-2.5 text-xs font-bold text-foreground focus:outline-none focus:border-primary"
                   />
                 </div>
               </div>
+            )}
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-foreground mb-1.5">
-                    Colour
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Polar White, Grey"
-                    value={vehicleData.colour}
-                    onChange={(e) => setVehicleData({ ...vehicleData, colour: e.target.value })}
-                    className="w-full bg-secondary/50 border border-border rounded-xl px-3.5 py-2.5 text-xs font-bold text-foreground focus:outline-none focus:border-primary"
-                  />
+            {/* STEP 2: VEHICLE DETAILS (IF RIDER) */}
+            {step === 2 && role === 'rider' && (
+              <div className="space-y-4 animate-fadeIn">
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-foreground mb-1.5">
+                      Vehicle Type
+                    </label>
+                    <select
+                      value={vehicleData.vehicle_type}
+                      onChange={(e) => setVehicleData({ ...vehicleData, vehicle_type: e.target.value })}
+                      className="w-full bg-secondary/50 border border-border rounded-xl px-3.5 py-2.5 text-xs font-bold text-foreground focus:outline-none focus:border-primary"
+                    >
+                      <option value="car">Car (Petrol/Diesel/CNG)</option>
+                      <option value="ev_car">EV Car</option>
+                      <option value="bike">Motorcycle / Bike</option>
+                      <option value="scooter">Scooter / Activa</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-foreground mb-1.5">
+                      Available Commute Seats *
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="6"
+                      value={vehicleData.available_seats}
+                      onChange={(e) => setVehicleData({ ...vehicleData, available_seats: parseInt(e.target.value, 10) || 1 })}
+                      className="w-full bg-secondary/50 border border-border rounded-xl px-3.5 py-2.5 text-xs font-bold text-foreground focus:outline-none focus:border-primary"
+                    />
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-xs font-semibold text-foreground mb-1.5">
-                    Registration Number *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="GJ 01 XX 0000"
-                    value={vehicleData.registration_number}
-                    onChange={(e) => setVehicleData({ ...vehicleData, registration_number: e.target.value })}
-                    className="w-full bg-secondary/50 border border-border rounded-xl px-3.5 py-2.5 text-xs font-bold text-foreground focus:outline-none focus:border-primary"
-                  />
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-foreground mb-1.5">
+                      Brand *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Hyundai, Tata, Honda"
+                      value={vehicleData.brand}
+                      onChange={(e) => setVehicleData({ ...vehicleData, brand: e.target.value })}
+                      className="w-full bg-secondary/50 border border-border rounded-xl px-3.5 py-2.5 text-xs font-bold text-foreground focus:outline-none focus:border-primary"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-foreground mb-1.5">
+                      Model *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. i20, Nexon, City"
+                      value={vehicleData.model}
+                      onChange={(e) => setVehicleData({ ...vehicleData, model: e.target.value })}
+                      className="w-full bg-secondary/50 border border-border rounded-xl px-3.5 py-2.5 text-xs font-bold text-foreground focus:outline-none focus:border-primary"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-foreground mb-1.5">
+                      Colour
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Polar White, Grey"
+                      value={vehicleData.colour}
+                      onChange={(e) => setVehicleData({ ...vehicleData, colour: e.target.value })}
+                      className="w-full bg-secondary/50 border border-border rounded-xl px-3.5 py-2.5 text-xs font-bold text-foreground focus:outline-none focus:border-primary"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-foreground mb-1.5">
+                      Registration Number *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="GJ 01 XX 0000"
+                      value={vehicleData.registration_number}
+                      onChange={(e) => setVehicleData({ ...vehicleData, registration_number: e.target.value })}
+                      className="w-full bg-secondary/50 border border-border rounded-xl px-3.5 py-2.5 text-xs font-bold text-foreground focus:outline-none focus:border-primary"
+                    />
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {/* Navigation Controls */}
-          <div className="mt-8 pt-5 border-t border-border flex items-center justify-between">
-            {step > 1 ? (
+            {/* Navigation Controls */}
+            <div className="mt-8 pt-5 border-t border-border flex items-center justify-between">
+              {step > 1 ? (
+                <button
+                  type="button"
+                  onClick={() => setStep(step - 1)}
+                  className="px-4 py-2.5 rounded-xl bg-secondary border border-border text-foreground font-bold text-xs hover:bg-slate-200 transition-all"
+                >
+                  Previous Step
+                </button>
+              ) : <div />}
+
               <button
                 type="button"
-                onClick={() => setStep(step - 1)}
-                className="px-4 py-2.5 rounded-xl bg-secondary border border-border text-foreground font-bold text-xs"
+                onClick={handleNext}
+                disabled={loading}
+                className="px-6 py-3 rounded-xl bg-primary hover:bg-primary-hover text-primary-foreground font-bold text-xs shadow-glow flex items-center gap-1.5 transition-all disabled:opacity-50 ml-auto"
               >
-                Previous Step
+                {loading 
+                  ? 'Saving Setup...' 
+                  : (step === totalSteps 
+                      ? 'Complete Profile & Create Commute' 
+                      : 'Continue to Vehicle Setup')}
+                <ArrowRight className="w-4 h-4" />
               </button>
-            ) : <div />}
-
-            <button
-              type="button"
-              onClick={handleNext}
-              disabled={loading}
-              className="px-6 py-3 rounded-xl bg-primary hover:bg-primary-hover text-primary-foreground font-bold text-xs shadow-glow flex items-center gap-1.5 transition-all disabled:opacity-50"
-            >
-              {loading ? 'Saving Setup...' : step === (role === 'seeker' ? 2 : 3) ? 'Complete Profile & Create Commute' : 'Continue to Next Step'}
-              <ArrowRight className="w-4 h-4" />
-            </button>
+            </div>
           </div>
         </div>
       </div>

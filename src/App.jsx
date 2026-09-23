@@ -17,9 +17,13 @@ import ProfilePage from './pages/ProfilePage';
 import SettingsPage from './pages/SettingsPage';
 import AdminDashboard from './pages/AdminDashboard';
 
+import ProtectedRoute from './components/ProtectedRoute';
+import ScrollToTop from './components/ScrollToTop';
+
 export default function App() {
   return (
     <BrowserRouter>
+      <ScrollToTop />
       <NotificationProvider>
         <AuthProvider>
           <CommuteProvider>
@@ -27,13 +31,65 @@ export default function App() {
               <Route path="/" element={<LandingPage />} />
               <Route path="/register" element={<Register />} />
               <Route path="/login" element={<Login />} />
-              <Route path="/onboarding" element={<Onboarding />} />
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/create-commute" element={<CreateCommute />} />
-              <Route path="/matches" element={<MatchesPage />} />
-              <Route path="/connections" element={<ConnectionsPage />} />
-              <Route path="/profile" element={<ProfilePage />} />
-              <Route path="/settings" element={<SettingsPage />} />
+              
+              {/* Protected Commute App Routes */}
+              <Route 
+                path="/onboarding" 
+                element={
+                  <ProtectedRoute>
+                    <Onboarding />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/dashboard" 
+                element={
+                  <ProtectedRoute>
+                    <Dashboard />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/create-commute" 
+                element={
+                  <ProtectedRoute>
+                    <CreateCommute />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/matches" 
+                element={
+                  <ProtectedRoute>
+                    <MatchesPage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/connections" 
+                element={
+                  <ProtectedRoute>
+                    <ConnectionsPage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/profile" 
+                element={
+                  <ProtectedRoute>
+                    <ProfilePage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/settings" 
+                element={
+                  <ProtectedRoute>
+                    <SettingsPage />
+                  </ProtectedRoute>
+                } 
+              />
+              
               <Route path="/admin" element={<AdminDashboard />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>

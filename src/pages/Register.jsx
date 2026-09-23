@@ -46,7 +46,6 @@ export default function Register() {
   // Step 2: OTP State
   const [isOtpStep, setIsOtpStep] = useState(false);
   const [otpCode, setOtpCode] = useState('');
-  const [debugOtp, setDebugOtp] = useState('');
   const [resendTimer, setResendTimer] = useState(60);
   const [loading, setLoading] = useState(false);
 
@@ -79,7 +78,6 @@ export default function Register() {
       const res = await registerUser(formData.email, formData.phone, formData.password, formData.fullName);
       if (res.success) {
         setIsOtpStep(true);
-        setDebugOtp(res.debugOtp || '');
         setResendTimer(60);
         addToast('Verification OTP sent to your email address!', 'success');
       }
@@ -118,7 +116,6 @@ export default function Register() {
     try {
       const res = await resendOtp(formData.email);
       if (res.success) {
-        setDebugOtp(res.debugOtp || '');
         setResendTimer(60);
         addToast('A new 6-digit OTP has been sent to your email.', 'info');
       }
@@ -426,22 +423,9 @@ export default function Register() {
                   <CheckCircle2 className="w-4 h-4 text-primary shrink-0 mt-0.5" />
                   <div>
                     <span className="font-bold block">Verification Code Sent!</span>
-                    <span className="font-medium text-muted-foreground">We've generated a 6-digit code for <strong>{formData.email}</strong></span>
+                    <span className="font-medium text-muted-foreground">We've sent a 6-digit verification code to <strong>{formData.email}</strong></span>
                   </div>
                 </div>
-
-                {debugOtp && (
-                  <div className="p-3 rounded-xl bg-secondary border border-border flex items-center justify-between text-xs font-semibold">
-                    <span className="text-foreground">Testing Code: <strong className="text-primary font-mono text-sm ml-1">{debugOtp}</strong></span>
-                    <button
-                      type="button"
-                      onClick={() => setOtpCode(debugOtp)}
-                      className="px-2.5 py-1 rounded bg-primary text-primary-foreground text-[10px] font-bold shadow-sm"
-                    >
-                      Auto-Fill
-                    </button>
-                  </div>
-                )}
 
                 <div>
                   <label className="block text-xs font-semibold text-foreground mb-2 text-center">

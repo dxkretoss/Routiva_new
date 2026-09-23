@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
 import { Bell, Shield, KeyRound, LogOut } from 'lucide-react';
-import Navbar from '../components/Navbar';
-import BottomNav from '../components/BottomNav';
+import DashboardLayout from '../components/DashboardLayout';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext';
 
 export default function SettingsPage() {
-  const { logoutUser } = useAuth();
+  const { logout, logoutUser } = useAuth();
   const { addToast } = useNotifications();
 
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
@@ -26,13 +25,14 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground pb-24 md:pb-12">
-      <Navbar />
-
-      <main className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 space-y-6">
+    <DashboardLayout
+      title="Account Settings"
+      subtitle="Manage notification preferences, privacy, and account credentials"
+    >
+      <div className="max-w-3xl mx-auto space-y-6">
         <div>
-          <h1 className="text-2xl font-black text-foreground">Account Settings</h1>
-          <p className="text-xs text-muted-foreground mt-1 font-medium">Manage notification preferences, privacy, and account credentials</p>
+          <h1 className="text-xl sm:text-2xl font-black text-foreground">Account Settings</h1>
+          <p className="text-xs text-muted-foreground mt-0.5 font-medium">Manage notification preferences, privacy, and account credentials</p>
         </div>
 
         {/* Notifications Preference */}
@@ -123,9 +123,7 @@ export default function SettingsPage() {
             </button>
           </div>
         </div>
-      </main>
-
-      <BottomNav />
-    </div>
+      </div>
+    </DashboardLayout>
   );
 }
