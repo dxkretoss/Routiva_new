@@ -35,6 +35,14 @@ export default function AdminLogin({ onLoginSuccess }) {
       });
 
       if (res.success && res.token) {
+        const sessionPayload = {
+          token: res.token,
+          role: res.role || 'super_admin',
+          email: res.user?.email || email.trim(),
+          authenticated_at: new Date().toISOString()
+        };
+        localStorage.setItem('routiva_admin_auth', JSON.stringify(sessionPayload));
+        sessionStorage.setItem('routiva_admin_auth', JSON.stringify(sessionPayload));
         onLoginSuccess();
       } else {
         setError(res.error || 'Invalid administrative credentials.');

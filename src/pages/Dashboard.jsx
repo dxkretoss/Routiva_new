@@ -31,35 +31,8 @@ export default function Dashboard() {
       subtitle="Ahmedabad ↔ Gandhinagar Daily Route Network"
     >
       <div className="space-y-6">
-        {/* Welcome Greeting */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-2xl sm:text-3xl font-black text-foreground tracking-tight">
-                Hello, {profile?.full_name || 'Commuter'}
-              </h1>
-              {profile?.phone_verified && (
-                <ShieldCheck className="w-5 h-5 text-emerald-600" title="Verified Member" />
-              )}
-            </div>
-            <p className="text-xs sm:text-sm text-muted-foreground mt-1 font-medium">
-              Ahmedabad ↔ Gandhinagar Daily Route Network
-            </p>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <Link
-              to="/create-commute"
-              className="px-4 py-2.5 rounded-xl bg-primary hover:bg-primary-hover text-primary-foreground font-bold text-xs shadow-glow flex items-center gap-1.5 transition-all"
-            >
-              <PlusCircle className="w-4 h-4" />
-              Create Commute Route
-            </Link>
-          </div>
-        </div>
-
         {/* Top Summary Metric Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="bg-card border border-border rounded-2xl p-4 shadow-sm">
             <div className="text-xs text-muted-foreground font-semibold flex items-center justify-between">
               <span>Active Route</span>

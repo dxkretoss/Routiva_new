@@ -10,7 +10,6 @@ export default defineConfig({
     include: ['react', 'react-dom', 'react-router-dom', 'lucide-react', 'react-phone-input-2'],
   },
   server: {
-    port: 3000,
-    open: true
+    port: 3000
   }
 });

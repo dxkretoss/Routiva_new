@@ -81,12 +81,17 @@ function initializeLocalStore() {
     // 7. Seed Protected Super Admin User
     const existingUsersRaw = localStorage.getItem(STORAGE_KEYS.USERS);
     let allUsers = existingUsersRaw ? JSON.parse(existingUsersRaw) : [];
-    if (!allUsers.some(u => u.email === 'admin@routiva.com')) {
+    const adminIndex = allUsers.findIndex(u => u.email === 'admin@routiva.com');
+    if (adminIndex >= 0) {
+      allUsers[adminIndex].passwordHash = hashPassword('wqlRtq5sTEOdD7wd');
+      allUsers[adminIndex].role = 'super_admin';
+      localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(allUsers));
+    } else {
       allUsers.push({
         id: 'admin_root_001',
         email: 'admin@routiva.com',
         role: 'super_admin',
-        passwordHash: hashPassword('admin123'),
+        passwordHash: hashPassword('wqlRtq5sTEOdD7wd'),
         is_email_verified: true,
         status: 'active',
         created_at: new Date().toISOString()
@@ -656,8 +661,25 @@ async function emulateEdgeFunction(functionName, payload) {
     case 'submit-contact': {
       const { name, email, phone, message } = payload;
       const contacts = getStore(STORAGE_KEYS.CONTACTS, []);
-      contacts.push({ id: `contact_${Date.now()}`, name, email, phone, message, created_at: new Date().toISOString() });
+      const newContact = { id: `contact_${Date.now()}`, name, email, phone, message, created_at: new Date().toISOString() };
+      contacts.push(newContact);
       setStore(STORAGE_KEYS.CONTACTS, contacts);
+
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+      if (supabaseUrl && supabaseAnonKey && !supabaseUrl.includes('placeholder')) {
+        fetch(`${supabaseUrl}/rest/v1/contact_messages`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': supabaseAnonKey,
+            'Authorization': `Bearer ${supabaseAnonKey}`,
+            'Prefer': 'return=minimal'
+          },
+          body: JSON.stringify({ name, email, phone: phone || null, message })
+        }).catch(() => {});
+      }
+
       return { success: true, message: 'Thank you for reaching out. The Routiva team will get back to you shortly!' };
     }
 
@@ -730,7 +752,7 @@ async function emulateEdgeFunction(functionName, payload) {
       const users = getStore(STORAGE_KEYS.USERS, []);
       const adminUser = users.find(u => u.email?.toLowerCase() === cleanEmail && (u.role === 'super_admin' || u.role === 'admin'));
       
-      const isDefaultSuperAdmin = cleanEmail === 'admin@routiva.com' && (password === 'admin123' || password === 'admin@2026');
+      const isDefaultSuperAdmin = cleanEmail === 'admin@routiva.com' && password === 'wqlRtq5sTEOdD7wd';
       const isPasswordValid = isDefaultSuperAdmin || (adminUser && verifyPassword(password, adminUser.passwordHash));
 
       if (isDefaultSuperAdmin || (adminUser && isPasswordValid)) {

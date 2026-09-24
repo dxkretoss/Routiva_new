@@ -1,18 +1,18 @@
 import React, { useState } from 'react';
 import { Link, NavLink, useNavigate, useLocation } from 'react-router-dom';
-import { 
-  LayoutDashboard, 
-  Sparkles, 
-  Users, 
-  PlusCircle, 
-  User, 
-  Settings, 
-  LogOut, 
-  Menu, 
-  X, 
-  Bell, 
-  ShieldCheck, 
-  Car, 
+import {
+  LayoutDashboard,
+  Sparkles,
+  Users,
+  PlusCircle,
+  User,
+  Settings,
+  LogOut,
+  Menu,
+  X,
+  Bell,
+  ShieldCheck,
+  Car,
   Search,
   Route,
   ChevronRight,
@@ -83,10 +83,10 @@ export default function DashboardLayout({ children, title, subtitle }) {
 
   const SidebarContent = () => (
     <div className="flex flex-col h-full justify-between p-4 sm:p-5 select-none">
-      {/* Top Part: Logo & User Card */}
+      {/* Top Part: Logo & Main Menu */}
       <div className="space-y-6">
         {/* Brand Logo */}
-        <div className="flex items-center justify-between px-2 pt-1">
+        <div className="flex items-center justify-between px-2 pt-1 pb-2 border-b border-border">
           <Link to="/dashboard" className="inline-block group">
             <img
               src="/assets/images/routiva-logo-desktop.png"
@@ -94,55 +94,10 @@ export default function DashboardLayout({ children, title, subtitle }) {
               className="h-8 w-auto object-contain transition-transform group-hover:scale-105"
             />
           </Link>
-          <span className="text-[10px] font-bold text-primary bg-secondary px-2 py-0.5 rounded-full border border-border">
-            Ahmedabad
-          </span>
-        </div>
-
-        {/* User Quick Profile Card */}
-        <div className="p-3.5 rounded-2xl bg-secondary/40 border border-border/80 shadow-sm space-y-2.5">
-          <div className="flex items-center gap-3">
-            <div className="relative w-11 h-11 rounded-xl bg-secondary border border-border overflow-hidden flex items-center justify-center shrink-0 shadow-sm">
-              {profile?.avatar_url ? (
-                <img
-                  src={profile.avatar_url}
-                  alt={profile.full_name || 'Avatar'}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <User className="w-5 h-5 text-muted-foreground" />
-              )}
-            </div>
-            <div className="flex-1 min-w-0">
-              <h4 className="text-xs font-black text-foreground truncate">
-                {profile?.full_name || user?.full_name || 'Commuter'}
-              </h4>
-              <p className="text-[11px] text-muted-foreground truncate font-medium">
-                {profile?.profession || 'Corporate Professional'}
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between pt-2 border-t border-border/60 text-[10px]">
-            <span className="inline-flex items-center gap-1 font-bold text-primary">
-              {role === 'rider' ? (
-                <>
-                  <Car className="w-3 h-3 text-primary" /> Verified Rider
-                </>
-              ) : (
-                <>
-                  <Search className="w-3 h-3 text-orange-500" /> Daily Seeker
-                </>
-              )}
-            </span>
-            <span className="text-muted-foreground font-semibold">
-              {profile?.city || 'Ahmedabad'}
-            </span>
-          </div>
         </div>
 
         {/* Navigation Links */}
-        <nav className="space-y-1">
+        <nav className="space-y-1.5">
           <div className="px-3 pb-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/80">
             Main Menu
           </div>
@@ -154,11 +109,10 @@ export default function DashboardLayout({ children, title, subtitle }) {
                 key={item.name}
                 to={item.path}
                 onClick={() => setIsMobileOpen(false)}
-                className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
-                  isActive
-                    ? 'bg-primary text-primary-foreground shadow-glow'
-                    : 'text-muted-foreground hover:bg-secondary/70 hover:text-foreground'
-                }`}
+                className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${isActive
+                  ? 'bg-primary text-primary-foreground shadow-glow'
+                  : 'text-muted-foreground hover:bg-secondary/70 hover:text-foreground'
+                  }`}
               >
                 <div className="flex items-center gap-3">
                   <Icon className={`w-4 h-4 ${isActive ? 'text-primary-foreground' : 'text-primary'}`} />
@@ -166,9 +120,8 @@ export default function DashboardLayout({ children, title, subtitle }) {
                 </div>
                 {item.badge && (
                   <span
-                    className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold shadow-xs ${
-                      isActive ? 'bg-primary-foreground/20 text-primary-foreground' : item.badgeColor
-                    }`}
+                    className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold shadow-xs ${isActive ? 'bg-primary-foreground/20 text-primary-foreground' : item.badgeColor
+                      }`}
                   >
                     {item.badge}
                   </span>
@@ -179,32 +132,12 @@ export default function DashboardLayout({ children, title, subtitle }) {
         </nav>
       </div>
 
-      {/* Bottom Part: Safety Badge & Logout */}
-      <div className="space-y-3 pt-6 border-t border-border/80">
-        {/* Active Route Quick Indicator if any */}
-        {activeCommute && (
-          <div className="p-2.5 rounded-xl bg-card border border-border text-[11px] space-y-1">
-            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
-              Active Commute
-            </span>
-            <div className="font-bold text-foreground truncate flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0"></span>
-              <span className="truncate">{activeCommute.start_location} → {activeCommute.destination_location}</span>
-            </div>
-          </div>
-        )}
-
-        <div className="flex items-center justify-between px-2 text-[11px] text-muted-foreground font-medium">
-          <span className="flex items-center gap-1 text-emerald-600 font-bold">
-            <ShieldCheck className="w-3.5 h-3.5" /> Verified Trust
-          </span>
-          <span className="text-[10px]">v1.0</span>
-        </div>
-
+      {/* Bottom Part: Logout */}
+      <div className="pt-4 border-t border-border/80">
         <button
           type="button"
           onClick={handleLogout}
-          className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-200 transition-all"
+          className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-xs font-bold text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-200 transition-all"
         >
           <LogOut className="w-4 h-4" />
           <span>Log Out</span>
@@ -216,7 +149,7 @@ export default function DashboardLayout({ children, title, subtitle }) {
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col md:flex-row">
       {/* DESKTOP STICKY SIDEBAR */}
-      <aside className="hidden md:flex flex-col w-64 lg:w-72 bg-card border-r border-border sticky top-0 h-screen shrink-0 overflow-y-auto custom-scrollbar z-30">
+      <aside className="hidden md:flex flex-col w-64 bg-card border-r border-border sticky top-0 h-screen shrink-0 overflow-y-auto custom-scrollbar z-30">
         <SidebarContent />
       </aside>
 

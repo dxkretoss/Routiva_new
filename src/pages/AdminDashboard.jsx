@@ -1,19 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Users, 
-  Car, 
-  MapPin, 
-  Route, 
-  CheckCircle2, 
-  Clock, 
-  Search, 
-  RefreshCw, 
-  LogOut, 
-  ShieldCheck, 
-  Mail, 
-  Phone, 
-  Calendar, 
-  ChevronRight, 
+import {
+  Users,
+  Car,
+  MapPin,
+  Route,
+  CheckCircle2,
+  Clock,
+  Search,
+  RefreshCw,
+  LogOut,
+  ShieldCheck,
+  Mail,
+  Phone,
+  Calendar,
+  ChevronRight,
+  ChevronDown,
   Sparkles,
   Server,
   Activity,
@@ -55,7 +56,7 @@ const DEPLOYED_EDGE_FUNCTIONS = [
 
 const checkAdminAuth = () => {
   try {
-    const raw = sessionStorage.getItem('routiva_admin_auth');
+    const raw = localStorage.getItem('routiva_admin_auth') || sessionStorage.getItem('routiva_admin_auth');
     if (!raw) return false;
     if (raw === 'true') return true;
     const parsed = JSON.parse(raw);
@@ -73,8 +74,8 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  // Selected User for Deep-Dive Details
-  const [selectedUserId, setSelectedUserId] = useState(null);
+  // Selected User Modal for Deep-Dive Details
+  const [selectedUserDetails, setSelectedUserDetails] = useState(null);
   const [selectedCommuteModal, setSelectedCommuteModal] = useState(null);
 
   // Dynamic Admin Data
@@ -110,11 +111,6 @@ export default function AdminDashboard() {
           vehicles: res.vehicles || [],
           contacts: res.contacts || []
         });
-
-        // Default select first user if none selected
-        if (!selectedUserId && commuters.length > 0) {
-          setSelectedUserId(commuters[0].id);
-        }
       }
     } catch (e) {
       console.error('Failed to load admin data', e);
@@ -130,6 +126,7 @@ export default function AdminDashboard() {
   }, [isAuthenticated]);
 
   const handleLogout = () => {
+    localStorage.removeItem('routiva_admin_auth');
     sessionStorage.removeItem('routiva_admin_auth');
     setIsAuthenticated(false);
   };
@@ -172,12 +169,6 @@ export default function AdminDashboard() {
     return true;
   });
 
-  // Selected User Object
-  const activeSelectedUser = adminData.commuters.find((c) => c.id === selectedUserId) || filteredCommuters[0] || null;
-  const activeSelectedUserCommutes = activeSelectedUser ? getUserCommutes(activeSelectedUser.id) : [];
-  const activeSelectedUserVehicle = activeSelectedUser ? getUserVehicle(activeSelectedUser.id) : null;
-  const activeSelectedUserConnections = activeSelectedUser ? getUserConnections(activeSelectedUser.id) : [];
-
   // Filtered Commutes
   const filteredCommutes = adminData.commutes.filter(
     (c) =>
@@ -197,9 +188,9 @@ export default function AdminDashboard() {
 
   const SidebarContent = () => (
     <div className="flex flex-col h-full justify-between p-4 sm:p-5 select-none">
-      {/* Top Part: Logo & Super Admin Badge */}
+      {/* Top Part: Logo */}
       <div className="space-y-6">
-        <div className="flex items-center justify-between px-2 pt-1">
+        <div className="flex items-center justify-between px-2 pt-1 pb-2 border-b border-border">
           <div className="flex items-center gap-2.5">
             <img
               src="/assets/images/routiva-logo-desktop.png"
@@ -207,34 +198,11 @@ export default function AdminDashboard() {
               className="h-8 w-auto object-contain"
             />
           </div>
-          <span className="text-[10px] font-bold text-primary bg-secondary px-2.5 py-0.5 rounded-full border border-border">
-            Admin v2.0
-          </span>
-        </div>
-
-        {/* Super Admin Quick Identity Card */}
-        <div className="p-3.5 rounded-2xl bg-secondary/50 border border-border space-y-2">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-primary text-primary-foreground font-black text-sm flex items-center justify-center shrink-0 shadow-glow">
-              SA
-            </div>
-            <div className="min-w-0 flex-1">
-              <h4 className="text-xs font-black text-foreground truncate">Super Administrator</h4>
-              <p className="text-[10px] text-muted-foreground font-mono truncate">admin@routiva.com</p>
-            </div>
-          </div>
-          <div className="pt-2 border-t border-border flex items-center justify-between text-[10px]">
-            <span className="flex items-center gap-1 font-bold text-emerald-600">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-              Live Super Admin
-            </span>
-            <span className="font-semibold text-muted-foreground">Ahmedabad Node</span>
-          </div>
         </div>
 
         {/* Admin Navigation Links */}
-        <nav className="space-y-1">
-          <div className="px-3 pb-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/80">
+        <nav className="space-y-1.5">
+          <div className="px-3 pb-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/80">
             Control Center
           </div>
           {navTabs.map((tab) => {
@@ -248,22 +216,20 @@ export default function AdminDashboard() {
                   setActiveTab(tab.id);
                   setIsMobileMenuOpen(false);
                 }}
-                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
-                  isActive
+                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${isActive
                     ? 'bg-primary text-primary-foreground shadow-glow'
                     : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
-                }`}
+                  }`}
               >
                 <div className="flex items-center gap-3 truncate">
                   <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-primary-foreground' : 'text-primary'}`} />
                   <span className="truncate">{tab.label}</span>
                 </div>
                 <span
-                  className={`text-[10px] px-2 py-0.5 rounded-full font-bold shrink-0 ${
-                    isActive
+                  className={`text-[10px] px-2 py-0.5 rounded-full font-bold shrink-0 ${isActive
                       ? 'bg-primary-foreground/20 text-primary-foreground'
                       : 'bg-secondary text-secondary-foreground border border-border'
-                  }`}
+                    }`}
                 >
                   {tab.count}
                 </span>
@@ -271,66 +237,10 @@ export default function AdminDashboard() {
             );
           })}
         </nav>
-
-        {/* Quick Commuters List in Sidebar */}
-        <div className="space-y-2 pt-2 border-t border-border">
-          <div className="flex items-center justify-between px-3">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/80">
-              Active Users ({adminData.commuters.length})
-            </span>
-            <span className="text-[9px] text-primary font-bold">Quick Switch</span>
-          </div>
-          <div className="max-h-48 overflow-y-auto custom-scrollbar space-y-1 pr-1">
-            {adminData.commuters.map((u) => {
-              const uRoutes = getUserCommutes(u.id);
-              const isSelected = activeSelectedUser?.id === u.id;
-              return (
-                <button
-                  key={u.id}
-                  type="button"
-                  onClick={() => {
-                    setSelectedUserId(u.id);
-                    setActiveTab('users');
-                    setIsMobileMenuOpen(false);
-                  }}
-                  className={`w-full flex items-center justify-between p-2 rounded-xl text-left transition-all text-xs ${
-                    isSelected && activeTab === 'users'
-                      ? 'bg-primary/15 border border-primary/40 text-foreground font-bold'
-                      : 'hover:bg-secondary text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  <div className="flex items-center gap-2 truncate">
-                    <div className="w-6 h-6 rounded-lg bg-secondary text-primary font-black text-[10px] flex items-center justify-center shrink-0 border border-border">
-                      {u.avatar_url ? (
-                        <img src={u.avatar_url} alt="" className="w-full h-full object-cover rounded-lg" />
-                      ) : (
-                        u.full_name?.charAt(0) || 'U'
-                      )}
-                    </div>
-                    <span className="truncate font-medium">{u.full_name}</span>
-                  </div>
-                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-secondary text-primary border border-border shrink-0">
-                    {uRoutes.length} rt
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
       </div>
 
-      {/* Bottom Part: Cluster Telemetry & Logout */}
-      <div className="space-y-3 pt-6 border-t border-border">
-        <div className="p-3 rounded-2xl bg-card border border-border space-y-1.5 text-xs">
-          <div className="flex items-center justify-between text-[11px]">
-            <span className="text-muted-foreground font-semibold">Cluster Health</span>
-            <span className="text-emerald-600 font-bold">100% OK</span>
-          </div>
-          <div className="text-[10px] text-muted-foreground font-mono truncate">
-            Edge: fekgaxhevbunbeifrbri
-          </div>
-        </div>
-
+      {/* Bottom Part: Logout Button */}
+      <div className="pt-4 border-t border-border">
         <button
           type="button"
           onClick={handleLogout}
@@ -346,7 +256,7 @@ export default function AdminDashboard() {
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col md:flex-row">
       {/* DESKTOP ADMIN SIDEBAR */}
-      <aside className="hidden md:flex flex-col w-64 lg:w-72 bg-card border-r border-border sticky top-0 h-screen shrink-0 overflow-y-auto custom-scrollbar z-30">
+      <aside className="hidden md:flex flex-col w-64 bg-card border-r border-border sticky top-0 h-screen shrink-0 overflow-y-auto custom-scrollbar z-30">
         <SidebarContent />
       </aside>
 
@@ -480,59 +390,28 @@ export default function AdminDashboard() {
             </div>
           </div>
 
-          {/* TAB 1: MASTER-DETAIL COMMUTERS & THEIR ROUTES EXPLORER */}
+          {/* TAB 1: COMMUTERS DIRECTORY TABLE & VIEW DETAILS */}
           {activeTab === 'users' && (
             <div className="space-y-4">
-              {/* Filter Pills Bar */}
-              <div className="flex flex-wrap items-center justify-between gap-3 p-3 bg-card border border-border rounded-2xl">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-xs font-bold text-muted-foreground flex items-center gap-1.5 px-2">
+              {/* Filter Bar with Dropdown */}
+              <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 bg-card border border-border rounded-2xl">
+                <div className="flex items-center gap-2.5">
+                  <span className="text-xs font-bold text-muted-foreground flex items-center gap-1.5">
                     <Filter className="w-3.5 h-3.5 text-primary" /> Filter Users:
                   </span>
-                  <button
-                    type="button"
-                    onClick={() => setUserFilter('all')}
-                    className={`px-3 py-1 rounded-xl text-xs font-bold transition-all ${
-                      userFilter === 'all'
-                        ? 'bg-primary text-primary-foreground shadow-sm'
-                        : 'bg-secondary text-secondary-foreground hover:bg-slate-200'
-                    }`}
-                  >
-                    All Users ({adminData.commuters.length})
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setUserFilter('riders')}
-                    className={`px-3 py-1 rounded-xl text-xs font-bold transition-all ${
-                      userFilter === 'riders'
-                        ? 'bg-primary text-primary-foreground shadow-sm'
-                        : 'bg-secondary text-secondary-foreground hover:bg-slate-200'
-                    }`}
-                  >
-                    Vehicle Owners ({adminData.stats.totalRiders})
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setUserFilter('seekers')}
-                    className={`px-3 py-1 rounded-xl text-xs font-bold transition-all ${
-                      userFilter === 'seekers'
-                        ? 'bg-primary text-primary-foreground shadow-sm'
-                        : 'bg-secondary text-secondary-foreground hover:bg-slate-200'
-                    }`}
-                  >
-                    Seekers ({adminData.stats.totalSeekers})
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setUserFilter('has-routes')}
-                    className={`px-3 py-1 rounded-xl text-xs font-bold transition-all ${
-                      userFilter === 'has-routes'
-                        ? 'bg-primary text-primary-foreground shadow-sm'
-                        : 'bg-secondary text-secondary-foreground hover:bg-slate-200'
-                    }`}
-                  >
-                    With Active Routes ({adminData.commuters.filter(c => getUserCommutes(c.id).length > 0).length})
-                  </button>
+                  <div className="relative">
+                    <select
+                      value={userFilter}
+                      onChange={(e) => setUserFilter(e.target.value)}
+                      className="appearance-none bg-secondary/80 hover:bg-secondary border border-border focus:border-primary rounded-xl pl-3 pr-8 py-1.5 text-xs font-bold text-foreground cursor-pointer transition-all outline-none"
+                    >
+                      <option value="all">All Users ({adminData.commuters.length})</option>
+                      <option value="riders">Vehicle Owners ({adminData.stats.totalRiders})</option>
+                      <option value="seekers">Seekers ({adminData.stats.totalSeekers})</option>
+                      <option value="has-routes">With Active Routes ({adminData.commuters.filter(c => getUserCommutes(c.id).length > 0).length})</option>
+                    </select>
+                    <ChevronDown className="w-3.5 h-3.5 text-muted-foreground absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  </div>
                 </div>
 
                 <span className="text-xs font-bold text-muted-foreground px-2">
@@ -540,402 +419,136 @@ export default function AdminDashboard() {
                 </span>
               </div>
 
-              {/* Master-Detail Split Grid */}
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-                {/* LEFT COLUMN: LIST OF ALL COMMUTERS (5 Cols on large screens) */}
-                <div className="lg:col-span-4 space-y-3">
-                  <div className="bg-card border border-border rounded-3xl p-4 shadow-card space-y-3">
-                    <div className="flex items-center justify-between pb-2 border-b border-border">
-                      <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
-                        <Users className="w-4 h-4 text-primary" />
-                        <span>Select Commuter</span>
-                      </h3>
-                      <span className="text-[10px] font-bold text-primary bg-secondary px-2 py-0.5 rounded-full border border-border">
-                        {filteredCommuters.length} Listed
-                      </span>
-                    </div>
+              {/* Commuters Table */}
+              <div className="bg-card border border-border rounded-3xl overflow-hidden shadow-card animate-fadeIn">
+                <div className="p-5 border-b border-border flex items-center justify-between">
+                  <div>
+                    <h3 className="text-base font-bold text-foreground">Registered Commuters Directory</h3>
+                    <p className="text-xs text-muted-foreground font-medium">Manage all platform commuters, vehicle owners, and daily ride seekers</p>
+                  </div>
+                  <span className="text-xs font-bold text-primary bg-secondary px-3 py-1 rounded-full border border-border">
+                    {filteredCommuters.length} Commuters
+                  </span>
+                </div>
 
-                    <div className="max-h-[720px] overflow-y-auto custom-scrollbar space-y-2.5 pr-1">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-secondary/40 text-muted-foreground uppercase text-[10px] font-bold border-b border-border">
+                      <tr>
+                        <th className="py-3.5 px-4">Commuter</th>
+                        <th className="py-3.5 px-4">Role / Type</th>
+                        <th className="py-3.5 px-4">Location & Profession</th>
+                        <th className="py-3.5 px-4">Phone / OTP</th>
+                        <th className="py-3.5 px-4">Routes & Vehicle</th>
+                        <th className="py-3.5 px-4 text-right">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border/60">
                       {filteredCommuters.length === 0 ? (
-                        <div className="text-center py-12 text-muted-foreground text-xs space-y-2">
-                          <Users className="w-8 h-8 text-muted-foreground/50 mx-auto" />
-                          <p>No commuters match your query "{searchQuery}"</p>
-                        </div>
+                        <tr>
+                          <td colSpan={6} className="text-center py-12 text-muted-foreground font-medium">
+                            <Users className="w-8 h-8 text-muted-foreground/40 mx-auto mb-2" />
+                            No commuters found matching query "{searchQuery}"
+                          </td>
+                        </tr>
                       ) : (
                         filteredCommuters.map((user) => {
                           const userCommutes = getUserCommutes(user.id);
-                          const isSelected = activeSelectedUser?.id === user.id;
                           const userVehicle = getUserVehicle(user.id);
+                          const isRider = userCommutes.some((cm) => cm.commute_type === 'rider') || user.role === 'rider' || Boolean(userVehicle);
 
                           return (
-                            <div
+                            <tr
                               key={user.id}
-                              onClick={() => setSelectedUserId(user.id)}
-                              className={`p-3.5 rounded-2xl border transition-all cursor-pointer relative ${
-                                isSelected
-                                  ? 'bg-primary/10 border-primary shadow-md ring-1 ring-primary'
-                                  : 'bg-secondary/40 hover:bg-secondary border-border'
-                              }`}
+                              onClick={() => setSelectedUserDetails(user)}
+                              className="hover:bg-secondary/30 transition-colors cursor-pointer font-medium"
                             >
-                              <div className="flex items-start gap-3">
-                                {/* User Avatar */}
-                                <div className="w-10 h-10 rounded-xl bg-card border border-border flex items-center justify-center font-black text-primary text-sm shrink-0 overflow-hidden shadow-xs">
-                                  {user.avatar_url ? (
-                                    <img src={user.avatar_url} alt="" className="w-full h-full object-cover" />
-                                  ) : (
-                                    user.full_name?.charAt(0) || 'U'
+                              {/* Commuter Avatar & Identity */}
+                              <td className="py-3.5 px-4">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-9 h-9 rounded-xl bg-secondary text-primary border border-border flex items-center justify-center font-black text-xs shrink-0 overflow-hidden shadow-xs">
+                                    {user.avatar_url ? (
+                                      <img src={user.avatar_url} alt="" className="w-full h-full object-cover" />
+                                    ) : (
+                                      user.full_name?.charAt(0) || 'U'
+                                    )}
+                                  </div>
+                                  <div className="min-w-0">
+                                    <h4 className="text-xs font-bold text-foreground truncate">{user.full_name}</h4>
+                                    <p className="text-[11px] text-muted-foreground font-mono truncate max-w-[180px]">{user.email}</p>
+                                  </div>
+                                </div>
+                              </td>
+
+                              {/* Role / Type */}
+                              <td className="py-3.5 px-4">
+                                <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-[10px] font-black uppercase ${isRider
+                                    ? 'bg-primary text-primary-foreground shadow-xs'
+                                    : 'bg-orange-50 text-orange-800 border border-orange-200'
+                                  }`}>
+                                  {isRider ? '🚗 Rider / Owner' : '🚶 Seeker'}
+                                </span>
+                              </td>
+
+                              {/* Location & Profession */}
+                              <td className="py-3.5 px-4">
+                                <div className="space-y-0.5">
+                                  <div className="text-foreground font-semibold flex items-center gap-1 truncate">
+                                    <MapPin className="w-3 h-3 text-primary shrink-0" />
+                                    <span>{user.area || 'Nikol'}, {user.city || 'Ahmedabad'}</span>
+                                  </div>
+                                  <div className="text-[11px] text-muted-foreground flex items-center gap-1 truncate">
+                                    <Briefcase className="w-3 h-3 text-muted-foreground shrink-0" />
+                                    <span>{user.profession || 'Corporate Professional'}{user.company ? ` • ${user.company}` : ''}</span>
+                                  </div>
+                                </div>
+                              </td>
+
+                              {/* Phone / OTP */}
+                              <td className="py-3.5 px-4">
+                                <div className="space-y-0.5">
+                                  <div className="text-foreground font-semibold">{user.phone || 'Not Provided'}</div>
+                                  <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-600">
+                                    <Check className="w-3 h-3" /> OTP Verified
+                                  </span>
+                                </div>
+                              </td>
+
+                              {/* Routes & Vehicle */}
+                              <td className="py-3.5 px-4">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="px-2 py-0.5 rounded-lg bg-secondary text-foreground text-[10px] font-bold border border-border">
+                                    {userCommutes.length} {userCommutes.length === 1 ? 'Route' : 'Routes'}
+                                  </span>
+                                  {userVehicle && (
+                                    <span className="px-2 py-0.5 rounded-lg bg-primary/10 text-primary text-[10px] font-bold border border-primary/20 flex items-center gap-1">
+                                      <Car className="w-3 h-3" />
+                                      <span>{userVehicle.brand} {userVehicle.model}</span>
+                                    </span>
                                   )}
                                 </div>
+                              </td>
 
-                                {/* User Meta Info */}
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center justify-between gap-1">
-                                    <h4 className="text-xs font-black text-foreground truncate">
-                                      {user.full_name}
-                                    </h4>
-                                    <span className="text-[9px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200 shrink-0">
-                                      OTP OK
-                                    </span>
-                                  </div>
-
-                                  <p className="text-[11px] text-muted-foreground truncate font-medium">
-                                    {user.profession || 'Commuter'} • {user.area || user.city || 'Ahmedabad'}
-                                  </p>
-
-                                  <div className="mt-2 flex items-center justify-between text-[10px] text-muted-foreground pt-2 border-t border-border/60">
-                                    <span className="font-mono truncate max-w-[120px]">{user.email}</span>
-                                    <div className="flex items-center gap-1.5 shrink-0">
-                                      <span className="px-2 py-0.5 rounded-md bg-secondary text-foreground font-bold border border-border">
-                                        {userCommutes.length} {userCommutes.length === 1 ? 'Route' : 'Routes'}
-                                      </span>
-                                      {userVehicle && (
-                                        <span className="p-1 rounded bg-secondary text-primary border border-border" title={`${userVehicle.brand} ${userVehicle.model}`}>
-                                          <Car className="w-2.5 h-2.5" />
-                                        </span>
-                                      )}
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
+                              {/* Action: View Details */}
+                              <td className="py-3.5 px-4 text-right">
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedUserDetails(user);
+                                  }}
+                                  className="px-3 py-1.5 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 ml-auto"
+                                >
+                                  <Eye className="w-3.5 h-3.5" />
+                                  <span>View Details</span>
+                                </button>
+                              </td>
+                            </tr>
                           );
                         })
                       )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* RIGHT COLUMN: FULL COMMUTER & THEIR ROUTE DETAILS (8 Cols on large screens) */}
-                <div className="lg:col-span-8 space-y-5">
-                  {activeSelectedUser ? (
-                    <div className="bg-card border border-border rounded-3xl p-6 shadow-card space-y-6 animate-fadeIn">
-                      {/* 1. Profile Header Card */}
-                      <div className="p-5 rounded-2xl bg-secondary/30 border border-border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                        <div className="flex items-center gap-4">
-                          <div className="w-16 h-16 rounded-2xl bg-secondary border-2 border-primary/40 flex items-center justify-center font-black text-2xl text-primary shrink-0 overflow-hidden shadow-md">
-                            {activeSelectedUser.avatar_url ? (
-                              <img src={activeSelectedUser.avatar_url} alt="" className="w-full h-full object-cover" />
-                            ) : (
-                              activeSelectedUser.full_name?.charAt(0) || 'U'
-                            )}
-                          </div>
-
-                          <div className="space-y-1">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <h3 className="text-lg sm:text-xl font-black text-foreground">
-                                {activeSelectedUser.full_name}
-                              </h3>
-                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold">
-                                <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Verified Account
-                              </span>
-                              <span className="px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 text-[10px] font-bold uppercase">
-                                {activeSelectedUser.role || (activeSelectedUserVehicle ? 'Rider' : 'Seeker')}
-                              </span>
-                            </div>
-
-                            <p className="text-xs text-muted-foreground font-medium flex flex-wrap items-center gap-x-3 gap-y-1">
-                              <span className="flex items-center gap-1">
-                                <Briefcase className="w-3.5 h-3.5 text-primary" />
-                                {activeSelectedUser.profession || 'Corporate Professional'}
-                              </span>
-                              {activeSelectedUser.company && (
-                                <span className="flex items-center gap-1">
-                                  <Building className="w-3.5 h-3.5 text-primary" />
-                                  {activeSelectedUser.company}
-                                </span>
-                              )}
-                              <span className="flex items-center gap-1">
-                                <MapPin className="w-3.5 h-3.5 text-primary" />
-                                {activeSelectedUser.area || 'Nikol'}, {activeSelectedUser.city || 'Ahmedabad'}
-                              </span>
-                            </p>
-                          </div>
-                        </div>
-
-                        {/* Contact Chips */}
-                        <div className="flex flex-col sm:items-end gap-1.5 text-xs text-muted-foreground w-full sm:w-auto pt-3 sm:pt-0 border-t sm:border-t-0 border-border">
-                          <div className="flex items-center gap-2 text-foreground font-semibold">
-                            <Mail className="w-3.5 h-3.5 text-primary" />
-                            <span>{activeSelectedUser.email}</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Phone className="w-3.5 h-3.5 text-primary" />
-                            <span>{activeSelectedUser.phone || '+91 Not Provided'}</span>
-                          </div>
-                          <div className="text-[10px] font-mono text-muted-foreground">
-                            ID: {activeSelectedUser.id}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* 2. Key Profile Information Attributes */}
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                        <div className="p-3.5 rounded-2xl bg-secondary/40 border border-border space-y-1">
-                          <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
-                            Residential Area
-                          </span>
-                          <span className="text-xs font-bold text-foreground truncate block">
-                            {activeSelectedUser.area || 'Nikol, Ahmedabad'}
-                          </span>
-                        </div>
-
-                        <div className="p-3.5 rounded-2xl bg-secondary/40 border border-border space-y-1">
-                          <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
-                            Office / Work Hub
-                          </span>
-                          <span className="text-xs font-bold text-foreground truncate block">
-                            {activeSelectedUser.company || 'SG Highway / GIFT City'}
-                          </span>
-                        </div>
-
-                        <div className="p-3.5 rounded-2xl bg-secondary/40 border border-border space-y-1">
-                          <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
-                            Auth Phone OTP
-                          </span>
-                          <span className="text-xs font-bold text-emerald-600 truncate block flex items-center gap-1">
-                            <Check className="w-3.5 h-3.5" /> Verified
-                          </span>
-                        </div>
-
-                        <div className="p-3.5 rounded-2xl bg-secondary/40 border border-border space-y-1">
-                          <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
-                            Registered Corridors
-                          </span>
-                          <span className="text-xs font-black text-primary block">
-                            {activeSelectedUserCommutes.length} Corridors
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* 3. COMMUTER'S ROUTE CORRIDORS SECTION (WITH INTERACTIVE LEAFLET MAPS) */}
-                      <div className="space-y-4">
-                        <div className="flex items-center justify-between pb-2 border-b border-border">
-                          <div>
-                            <h4 className="text-sm font-black text-foreground flex items-center gap-2">
-                              <Route className="w-4 h-4 text-primary" />
-                              <span>Registered Commute Routes ({activeSelectedUserCommutes.length})</span>
-                            </h4>
-                            <p className="text-xs text-muted-foreground">
-                              All origin-to-destination corridors and intermediate stops published by {activeSelectedUser.full_name}
-                            </p>
-                          </div>
-                        </div>
-
-                        {activeSelectedUserCommutes.length === 0 ? (
-                          <div className="p-8 rounded-2xl bg-secondary/20 border border-dashed border-border text-center space-y-2">
-                            <Route className="w-8 h-8 text-muted-foreground/40 mx-auto" />
-                            <h5 className="text-xs font-bold text-foreground">No Commute Route Published</h5>
-                            <p className="text-[11px] text-muted-foreground max-w-sm mx-auto">
-                              This commuter has completed account setup but has not yet created a regular daily commute route.
-                            </p>
-                          </div>
-                        ) : (
-                          <div className="space-y-5">
-                            {activeSelectedUserCommutes.map((commute, idx) => (
-                              <div
-                                key={commute.id || idx}
-                                className="p-5 rounded-2xl bg-secondary/30 border border-border space-y-4 shadow-sm"
-                              >
-                                {/* Route Card Header */}
-                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-border/80">
-                                  <div className="space-y-1">
-                                    <div className="flex items-center gap-2">
-                                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase ${
-                                        commute.commute_type === 'rider'
-                                          ? 'bg-primary text-primary-foreground'
-                                          : 'bg-orange-100 text-orange-800'
-                                      }`}>
-                                        {commute.commute_type === 'rider' ? '🚗 Vehicle Owner / Driver' : '🚶 Passenger / Seeker'}
-                                      </span>
-                                      <span className="text-xs font-black text-foreground">
-                                        Route #{idx + 1}
-                                      </span>
-                                    </div>
-                                    <div className="text-sm font-black text-foreground flex items-center gap-2 flex-wrap">
-                                      <span className="text-primary">{commute.start_location}</span>
-                                      <ArrowRight className="w-4 h-4 text-muted-foreground shrink-0" />
-                                      <span className="text-primary">{commute.destination_location}</span>
-                                    </div>
-                                  </div>
-
-                                  <div className="flex items-center gap-3">
-                                    <div className="text-right">
-                                      <div className="text-xs font-black text-foreground">₹{commute.contribution_amount || 50} / day</div>
-                                      <div className="text-[10px] text-muted-foreground">Fuel Cost Split</div>
-                                    </div>
-                                    <button
-                                      type="button"
-                                      onClick={() => setSelectedCommuteModal(commute)}
-                                      className="px-3 py-1.5 rounded-xl bg-card hover:bg-primary hover:text-primary-foreground border border-border text-foreground text-xs font-bold transition-all shadow-xs flex items-center gap-1.5"
-                                    >
-                                      <Eye className="w-3.5 h-3.5" />
-                                      <span>Full Map</span>
-                                    </button>
-                                  </div>
-                                </div>
-
-                                {/* Route Key Details Grid */}
-                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-                                  <div className="p-2.5 rounded-xl bg-card border border-border space-y-0.5">
-                                    <span className="text-[10px] text-muted-foreground font-bold uppercase flex items-center gap-1">
-                                      <Clock className="w-3 h-3 text-primary" /> Departure Time
-                                    </span>
-                                    <span className="font-black text-foreground">{commute.departure_time || '8:30 AM'}</span>
-                                  </div>
-
-                                  <div className="p-2.5 rounded-xl bg-card border border-border space-y-0.5">
-                                    <span className="text-[10px] text-muted-foreground font-bold uppercase flex items-center gap-1">
-                                      <Calendar className="w-3 h-3 text-primary" /> Schedule Days
-                                    </span>
-                                    <span className="font-bold text-foreground truncate block">
-                                      {commute.days?.join(', ') || 'Mon, Tue, Wed, Thu, Fri'}
-                                    </span>
-                                  </div>
-
-                                  <div className="p-2.5 rounded-xl bg-card border border-border space-y-0.5">
-                                    <span className="text-[10px] text-muted-foreground font-bold uppercase flex items-center gap-1">
-                                      <Car className="w-3 h-3 text-primary" /> Available Seats
-                                    </span>
-                                    <span className="font-black text-foreground">{commute.available_seats || 3} Seats</span>
-                                  </div>
-
-                                  <div className="p-2.5 rounded-xl bg-card border border-border space-y-0.5">
-                                    <span className="text-[10px] text-muted-foreground font-bold uppercase flex items-center gap-1">
-                                      <Navigation className="w-3 h-3 text-primary" /> Intermediate Stops
-                                    </span>
-                                    <span className="font-black text-foreground">{commute.route_points?.length || 0} Stops</span>
-                                  </div>
-                                </div>
-
-                                {/* Sequenced Stops */}
-                                {commute.route_points && commute.route_points.length > 0 && (
-                                  <div className="space-y-1.5">
-                                    <span className="text-[10px] font-bold text-muted-foreground uppercase block">
-                                      Stop Sequence Along Corridor:
-                                    </span>
-                                    <div className="flex flex-wrap gap-1.5">
-                                      {commute.route_points.map((pt, pIdx) => (
-                                        <span
-                                          key={pIdx}
-                                          className="px-2.5 py-1 rounded-xl bg-card border border-border text-[11px] font-semibold text-foreground flex items-center gap-1.5 shadow-xs"
-                                        >
-                                          <span className="w-4 h-4 rounded-full bg-primary text-primary-foreground text-[9px] font-black flex items-center justify-center">
-                                            {pIdx + 1}
-                                          </span>
-                                          <span>{pt.name}</span>
-                                        </span>
-                                      ))}
-                                    </div>
-                                  </div>
-                                )}
-
-                                {/* Embedded Route Map */}
-                                <div className="rounded-2xl overflow-hidden border border-border h-48 shadow-inner relative">
-                                  <LeafletRouteMap
-                                    startLocation={commute.start_location}
-                                    destinationLocation={commute.destination_location}
-                                    routePoints={commute.route_points || []}
-                                    preferredPoints={commute.preferred_route_points || []}
-                                  />
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* 4. Registered Vehicle Details (If Available) */}
-                      {activeSelectedUserVehicle && (
-                        <div className="p-5 rounded-2xl bg-secondary/30 border border-border space-y-3">
-                          <div className="flex items-center justify-between pb-2 border-b border-border/80">
-                            <h4 className="text-xs font-black text-foreground flex items-center gap-2">
-                              <Car className="w-4 h-4 text-primary" />
-                              <span>Registered Commuter Vehicle</span>
-                            </h4>
-                            <span className="text-[10px] font-bold text-primary uppercase bg-card px-2 py-0.5 rounded border border-border">
-                              {activeSelectedUserVehicle.vehicle_type || 'Car'}
-                            </span>
-                          </div>
-
-                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-                            <div className="p-2.5 rounded-xl bg-card border border-border">
-                              <span className="text-[10px] text-muted-foreground font-bold uppercase block">Brand & Model</span>
-                              <span className="font-black text-foreground">{activeSelectedUserVehicle.brand} {activeSelectedUserVehicle.model}</span>
-                            </div>
-
-                            <div className="p-2.5 rounded-xl bg-card border border-border">
-                              <span className="text-[10px] text-muted-foreground font-bold uppercase block">Plate Number</span>
-                              <span className="font-black text-foreground font-mono">{activeSelectedUserVehicle.registration_number || activeSelectedUserVehicle.license_plate}</span>
-                            </div>
-
-                            <div className="p-2.5 rounded-xl bg-card border border-border">
-                              <span className="text-[10px] text-muted-foreground font-bold uppercase block">Color & Fuel</span>
-                              <span className="font-bold text-foreground">{activeSelectedUserVehicle.colour || activeSelectedUserVehicle.color || 'White'} • {activeSelectedUserVehicle.fuel_type || 'Petrol'}</span>
-                            </div>
-
-                            <div className="p-2.5 rounded-xl bg-card border border-border">
-                              <span className="text-[10px] text-muted-foreground font-bold uppercase block">Capacity</span>
-                              <span className="font-black text-foreground">{activeSelectedUserVehicle.available_seats} Passenger Seats</span>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* 5. User Connections & Rides History */}
-                      {activeSelectedUserConnections.length > 0 && (
-                        <div className="p-5 rounded-2xl bg-secondary/30 border border-border space-y-3">
-                          <h4 className="text-xs font-black text-foreground flex items-center gap-2">
-                            <Activity className="w-4 h-4 text-emerald-500" />
-                            <span>Ride Connections ({activeSelectedUserConnections.length})</span>
-                          </h4>
-
-                          <div className="space-y-2">
-                            {activeSelectedUserConnections.map((conn) => (
-                              <div key={conn.id} className="p-3 rounded-xl bg-card border border-border flex items-center justify-between text-xs">
-                                <div>
-                                  <div className="font-bold text-foreground">{conn.pickup_point} → {conn.drop_point}</div>
-                                  <div className="text-[10px] text-muted-foreground">{conn.message || 'Ride sharing connection'}</div>
-                                </div>
-                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                                  conn.status === 'accepted' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
-                                }`}>
-                                  {conn.status}
-                                </span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="bg-card border border-border rounded-3xl p-12 text-center text-muted-foreground space-y-3 shadow-card">
-                      <User className="w-12 h-12 text-muted-foreground/40 mx-auto" />
-                      <h4 className="text-sm font-bold text-foreground">No Commuter Selected</h4>
-                      <p className="text-xs max-w-sm mx-auto">
-                        Please select a commuter from the list on the left to inspect their profile and registered route corridors.
-                      </p>
-                    </div>
-                  )}
+                    </tbody>
+                  </table>
                 </div>
               </div>
             </div>
@@ -982,11 +595,10 @@ export default function AdminDashboard() {
                           className="hover:bg-secondary/30 transition-colors cursor-pointer font-medium"
                         >
                           <td className="py-3.5 px-4">
-                            <span className={`px-2.5 py-1 rounded-xl text-[10px] font-bold uppercase ${
-                              commute.commute_type === 'rider'
+                            <span className={`px-2.5 py-1 rounded-xl text-[10px] font-bold uppercase ${commute.commute_type === 'rider'
                                 ? 'bg-secondary text-primary border border-primary/30'
                                 : 'bg-orange-50 text-orange-700 border border-orange-200'
-                            }`}>
+                              }`}>
                               {commute.commute_type}
                             </span>
                           </td>
@@ -1087,11 +699,10 @@ export default function AdminDashboard() {
                             {conn.message}
                           </td>
                           <td className="py-3.5 px-4">
-                            <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
-                              conn.status === 'accepted'
+                            <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${conn.status === 'accepted'
                                 ? 'bg-emerald-100 text-emerald-800'
                                 : 'bg-amber-100 text-amber-800'
-                            }`}>
+                              }`}>
                               {conn.status}
                             </span>
                           </td>
@@ -1237,6 +848,341 @@ export default function AdminDashboard() {
           )}
         </main>
       </div>
+
+      {/* FULL COMMUTER DEEP-DIVE DETAILS MODAL */}
+      {selectedUserDetails && (() => {
+        const userCommutes = getUserCommutes(selectedUserDetails.id);
+        const userVehicle = getUserVehicle(selectedUserDetails.id);
+        const userConnections = getUserConnections(selectedUserDetails.id);
+
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm animate-fadeIn">
+            <div className="relative w-full max-w-4xl bg-card border border-border rounded-3xl shadow-2xl max-h-[90vh] overflow-y-auto custom-scrollbar p-6 space-y-6">
+              {/* Modal Header */}
+              <div className="flex items-center justify-between pb-4 border-b border-border">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-primary text-primary-foreground flex items-center justify-center font-black text-sm shadow-xs">
+                    <User className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-base sm:text-lg font-black text-foreground">
+                      Commuter Full Profile & Routes
+                    </h3>
+                    <p className="text-xs text-muted-foreground font-medium">
+                      Detailed account telemetry and registered daily commute corridors
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setSelectedUserDetails(null)}
+                  className="p-2 rounded-xl bg-secondary text-muted-foreground hover:text-foreground transition-all"
+                  title="Close Details"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* 1. Profile Header Card */}
+              <div className="p-5 rounded-2xl bg-secondary/30 border border-border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-4">
+                  <div className="w-16 h-16 rounded-2xl bg-secondary border-2 border-primary/40 flex items-center justify-center font-black text-2xl text-primary shrink-0 overflow-hidden shadow-md">
+                    {selectedUserDetails.avatar_url ? (
+                      <img src={selectedUserDetails.avatar_url} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      selectedUserDetails.full_name?.charAt(0) || 'U'
+                    )}
+                  </div>
+
+                  <div className="space-y-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className="text-lg sm:text-xl font-black text-foreground">
+                        {selectedUserDetails.full_name}
+                      </h3>
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold">
+                        <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Verified Account
+                      </span>
+                      <span className="px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 text-[10px] font-bold uppercase">
+                        {selectedUserDetails.role || (userVehicle ? 'Rider' : 'Seeker')}
+                      </span>
+                    </div>
+
+                    <p className="text-xs text-muted-foreground font-medium flex flex-wrap items-center gap-x-3 gap-y-1">
+                      <span className="flex items-center gap-1">
+                        <Briefcase className="w-3.5 h-3.5 text-primary" />
+                        {selectedUserDetails.profession || 'Corporate Professional'}
+                      </span>
+                      {selectedUserDetails.company && (
+                        <span className="flex items-center gap-1">
+                          <Building className="w-3.5 h-3.5 text-primary" />
+                          {selectedUserDetails.company}
+                        </span>
+                      )}
+                      <span className="flex items-center gap-1">
+                        <MapPin className="w-3.5 h-3.5 text-primary" />
+                        {selectedUserDetails.area || 'Nikol'}, {selectedUserDetails.city || 'Ahmedabad'}
+                      </span>
+                    </p>
+                  </div>
+                </div>
+
+                {/* Contact Chips */}
+                <div className="flex flex-col sm:items-end gap-1.5 text-xs text-muted-foreground w-full sm:w-auto pt-3 sm:pt-0 border-t sm:border-t-0 border-border">
+                  <div className="flex items-center gap-2 text-foreground font-semibold">
+                    <Mail className="w-3.5 h-3.5 text-primary" />
+                    <span>{selectedUserDetails.email}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Phone className="w-3.5 h-3.5 text-primary" />
+                    <span>{selectedUserDetails.phone || '+91 Not Provided'}</span>
+                  </div>
+                  <div className="text-[10px] font-mono text-muted-foreground">
+                    ID: {selectedUserDetails.id}
+                  </div>
+                </div>
+              </div>
+
+              {/* 2. Key Profile Information Attributes */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="p-3.5 rounded-2xl bg-secondary/40 border border-border space-y-1">
+                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
+                    Residential Area
+                  </span>
+                  <span className="text-xs font-bold text-foreground truncate block">
+                    {selectedUserDetails.area || 'Nikol, Ahmedabad'}
+                  </span>
+                </div>
+
+                <div className="p-3.5 rounded-2xl bg-secondary/40 border border-border space-y-1">
+                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
+                    Office / Work Hub
+                  </span>
+                  <span className="text-xs font-bold text-foreground truncate block">
+                    {selectedUserDetails.company || 'SG Highway / GIFT City'}
+                  </span>
+                </div>
+
+                <div className="p-3.5 rounded-2xl bg-secondary/40 border border-border space-y-1">
+                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
+                    Auth Phone OTP
+                  </span>
+                  <span className="text-xs font-bold text-emerald-600 truncate block flex items-center gap-1">
+                    <Check className="w-3.5 h-3.5" /> Verified
+                  </span>
+                </div>
+
+                <div className="p-3.5 rounded-2xl bg-secondary/40 border border-border space-y-1">
+                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
+                    Registered Corridors
+                  </span>
+                  <span className="text-xs font-black text-primary block">
+                    {userCommutes.length} Corridors
+                  </span>
+                </div>
+              </div>
+
+              {/* 3. Registered Commute Routes */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between pb-2 border-b border-border">
+                  <div>
+                    <h4 className="text-sm font-black text-foreground flex items-center gap-2">
+                      <Route className="w-4 h-4 text-primary" />
+                      <span>Registered Commute Routes ({userCommutes.length})</span>
+                    </h4>
+                    <p className="text-xs text-muted-foreground">
+                      All origin-to-destination corridors and intermediate stops published by {selectedUserDetails.full_name}
+                    </p>
+                  </div>
+                </div>
+
+                {userCommutes.length === 0 ? (
+                  <div className="p-8 rounded-2xl bg-secondary/20 border border-dashed border-border text-center space-y-2">
+                    <Route className="w-8 h-8 text-muted-foreground/40 mx-auto" />
+                    <h5 className="text-xs font-bold text-foreground">No Commute Route Published</h5>
+                    <p className="text-[11px] text-muted-foreground max-w-sm mx-auto">
+                      This commuter has completed account setup but has not yet created a regular daily commute route.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-5">
+                    {userCommutes.map((commute, idx) => (
+                      <div
+                        key={commute.id || idx}
+                        className="p-5 rounded-2xl bg-secondary/30 border border-border space-y-4 shadow-sm"
+                      >
+                        {/* Route Card Header */}
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-border/80">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase ${commute.commute_type === 'rider'
+                                  ? 'bg-primary text-primary-foreground'
+                                  : 'bg-orange-100 text-orange-800'
+                                }`}>
+                                {commute.commute_type === 'rider' ? '🚗 Vehicle Owner / Driver' : '🚶 Passenger / Seeker'}
+                              </span>
+                              <span className="text-xs font-black text-foreground">
+                                Route #{idx + 1}
+                              </span>
+                            </div>
+                            <div className="text-sm font-black text-foreground flex items-center gap-2 flex-wrap">
+                              <span className="text-primary">{commute.start_location}</span>
+                              <ArrowRight className="w-4 h-4 text-muted-foreground shrink-0" />
+                              <span className="text-primary">{commute.destination_location}</span>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-3">
+                            <div className="text-right">
+                              <div className="text-xs font-black text-foreground">₹{commute.contribution_amount || 50} / day</div>
+                              <div className="text-[10px] text-muted-foreground">Fuel Cost Split</div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setSelectedCommuteModal(commute)}
+                              className="px-3 py-1.5 rounded-xl bg-card hover:bg-primary hover:text-primary-foreground border border-border text-foreground text-xs font-bold transition-all shadow-xs flex items-center gap-1.5"
+                            >
+                              <Eye className="w-3.5 h-3.5" />
+                              <span>Full Map</span>
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Route Key Details Grid */}
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                          <div className="p-2.5 rounded-xl bg-card border border-border space-y-0.5">
+                            <span className="text-[10px] text-muted-foreground font-bold uppercase flex items-center gap-1">
+                              <Clock className="w-3 h-3 text-primary" /> Departure Time
+                            </span>
+                            <span className="font-black text-foreground">{commute.departure_time || '8:30 AM'}</span>
+                          </div>
+
+                          <div className="p-2.5 rounded-xl bg-card border border-border space-y-0.5">
+                            <span className="text-[10px] text-muted-foreground font-bold uppercase flex items-center gap-1">
+                              <Calendar className="w-3 h-3 text-primary" /> Schedule Days
+                            </span>
+                            <span className="font-bold text-foreground truncate block">
+                              {commute.days?.join(', ') || 'Mon, Tue, Wed, Thu, Fri'}
+                            </span>
+                          </div>
+
+                          <div className="p-2.5 rounded-xl bg-card border border-border space-y-0.5">
+                            <span className="text-[10px] text-muted-foreground font-bold uppercase flex items-center gap-1">
+                              <Car className="w-3 h-3 text-primary" /> Available Seats
+                            </span>
+                            <span className="font-black text-foreground">{commute.available_seats || 3} Seats</span>
+                          </div>
+
+                          <div className="p-2.5 rounded-xl bg-card border border-border space-y-0.5">
+                            <span className="text-[10px] text-muted-foreground font-bold uppercase flex items-center gap-1">
+                              <Navigation className="w-3 h-3 text-primary" /> Intermediate Stops
+                            </span>
+                            <span className="font-black text-foreground">{commute.route_points?.length || 0} Stops</span>
+                          </div>
+                        </div>
+
+                        {/* Sequenced Stops */}
+                        {commute.route_points && commute.route_points.length > 0 && (
+                          <div className="space-y-1.5">
+                            <span className="text-[10px] font-bold text-muted-foreground uppercase block">
+                              Stop Sequence Along Corridor:
+                            </span>
+                            <div className="flex flex-wrap gap-1.5">
+                              {commute.route_points.map((pt, pIdx) => (
+                                <span
+                                  key={pIdx}
+                                  className="px-2.5 py-1 rounded-xl bg-card border border-border text-[11px] font-semibold text-foreground flex items-center gap-1.5 shadow-xs"
+                                >
+                                  <span className="w-4 h-4 rounded-full bg-primary text-primary-foreground text-[9px] font-black flex items-center justify-center">
+                                    {pIdx + 1}
+                                  </span>
+                                  <span>{pt.name}</span>
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Embedded Route Map */}
+                        <div className="rounded-2xl overflow-hidden border border-border h-48 shadow-inner relative">
+                          <LeafletRouteMap
+                            startLocation={commute.start_location}
+                            destinationLocation={commute.destination_location}
+                            routePoints={commute.route_points || []}
+                            preferredPoints={commute.preferred_route_points || []}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* 4. Registered Vehicle Details */}
+              {userVehicle && (
+                <div className="p-5 rounded-2xl bg-secondary/30 border border-border space-y-3">
+                  <div className="flex items-center justify-between pb-2 border-b border-border/80">
+                    <h4 className="text-xs font-black text-foreground flex items-center gap-2">
+                      <Car className="w-4 h-4 text-primary" />
+                      <span>Registered Commuter Vehicle</span>
+                    </h4>
+                    <span className="text-[10px] font-bold text-primary uppercase bg-card px-2 py-0.5 rounded border border-border">
+                      {userVehicle.vehicle_type || 'Car'}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                    <div className="p-2.5 rounded-xl bg-card border border-border">
+                      <span className="text-[10px] text-muted-foreground font-bold uppercase block">Brand & Model</span>
+                      <span className="font-black text-foreground">{userVehicle.brand} {userVehicle.model}</span>
+                    </div>
+
+                    <div className="p-2.5 rounded-xl bg-card border border-border">
+                      <span className="text-[10px] text-muted-foreground font-bold uppercase block">Plate Number</span>
+                      <span className="font-black text-foreground font-mono">{userVehicle.registration_number || userVehicle.license_plate}</span>
+                    </div>
+
+                    <div className="p-2.5 rounded-xl bg-card border border-border">
+                      <span className="text-[10px] text-muted-foreground font-bold uppercase block">Color & Fuel</span>
+                      <span className="font-bold text-foreground">{userVehicle.colour || userVehicle.color || 'White'} • {userVehicle.fuel_type || 'Petrol'}</span>
+                    </div>
+
+                    <div className="p-2.5 rounded-xl bg-card border border-border">
+                      <span className="text-[10px] text-muted-foreground font-bold uppercase block">Capacity</span>
+                      <span className="font-black text-foreground">{userVehicle.available_seats} Passenger Seats</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* 5. User Connections & Rides History */}
+              {userConnections.length > 0 && (
+                <div className="p-5 rounded-2xl bg-secondary/30 border border-border space-y-3">
+                  <h4 className="text-xs font-black text-foreground flex items-center gap-2">
+                    <Activity className="w-4 h-4 text-emerald-500" />
+                    <span>Ride Connections ({userConnections.length})</span>
+                  </h4>
+
+                  <div className="space-y-2">
+                    {userConnections.map((conn) => (
+                      <div key={conn.id} className="p-3 rounded-xl bg-card border border-border flex items-center justify-between text-xs">
+                        <div>
+                          <div className="font-bold text-foreground">{conn.pickup_point} → {conn.drop_point}</div>
+                          <div className="text-[10px] text-muted-foreground">{conn.message || 'Ride sharing connection'}</div>
+                        </div>
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${conn.status === 'accepted' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
+                          }`}>
+                          {conn.status}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* FULL COMMUTE CORRIDOR INSPECTION MODAL */}
       {selectedCommuteModal && (

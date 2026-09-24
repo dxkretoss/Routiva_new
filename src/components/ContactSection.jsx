@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { Mail, MapPin, Send, CheckCircle2 } from 'lucide-react';
+import PhoneInput from 'react-phone-input-2';
+import 'react-phone-input-2/lib/style.css';
 import { invokeEdgeFunction } from '../lib/edgeFunctions';
 import { useNotifications } from '../context/NotificationContext';
 
@@ -8,7 +10,7 @@ export default function ContactSection() {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-    phone: '',
+    phone: '+91',
     message: ''
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -24,10 +26,12 @@ export default function ContactSection() {
     setIsSubmitting(true);
     try {
       const res = await invokeEdgeFunction('submit-contact', formData);
-      if (res.success) {
+      if (res?.success) {
         setSubmitted(true);
-        addToast(res.message, 'success');
-        setFormData({ name: '', email: '', phone: '', message: '' });
+        addToast(res.message || 'Thank you for reaching out. We will get back to you shortly!', 'success');
+        setFormData({ name: '', email: '', phone: '+91', message: '' });
+      } else {
+        addToast(res?.error || 'Failed to submit message. Please try again.', 'error');
       }
     } catch (err) {
       addToast(err.message || 'Failed to submit message.', 'error');
@@ -129,13 +133,23 @@ export default function ContactSection() {
                   <label className="block text-xs font-semibold text-foreground mb-1.5">
                     Phone / WhatsApp Number
                   </label>
-                  <input
-                    type="tel"
-                    placeholder="+91 98765 43210"
-                    value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    className="w-full bg-secondary/50 border border-border rounded-xl px-3.5 py-2.5 text-xs font-semibold text-foreground focus:outline-none focus:border-primary"
-                  />
+                  <div className="phone-input-container">
+                    <PhoneInput
+                      country={'in'}
+                      value={formData.phone}
+                      onChange={(phone) => {
+                        const formatted = phone ? (phone.startsWith('+') ? phone : `+${phone}`) : '+91';
+                        setFormData({ ...formData, phone: formatted });
+                      }}
+                      enableSearch={true}
+                      disableSearchIcon={true}
+                      searchPlaceholder="Search country..."
+                      inputProps={{
+                        name: 'phone',
+                        placeholder: 'Enter mobile number'
+                      }}
+                    />
+                  </div>
                 </div>
 
                 <div>
